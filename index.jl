@@ -18,7 +18,7 @@ md"""
 """
 
 # ╔═╡ 52e62656-9402-45b9-9c35-7e870b044e49
-rootpath = "https://mathutopia.github.io/dmexerbook/";
+rootpath = "https://mathutopia.github.io/dmexerbook/" ;
 
 # ╔═╡ cdd355bf-0ddd-4c8e-af98-4c1def522af5
 begin
