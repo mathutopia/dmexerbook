@@ -17,8 +17,8 @@ end
 # ╔═╡ e39c88ab-fb14-45ac-9d17-5ecdd0fbe00d
 using StatsPlots,CSV, DataFrames,DataFramesMeta,CategoricalArrays,StatsBase, FreqTables,PlutoUI
 
-# ╔═╡ 9f7d8622-45df-4737-8741-66efcd684776
-include("Box.jl");nothing;
+# ╔═╡ 7ceb9b5d-e323-4828-9582-65e460a370bd
+using Box
 
 # ╔═╡ 1a526bdd-08e6-4850-8d20-e4174979db84
 TableOfContents(title = "目录")
@@ -395,6 +395,7 @@ md"""
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+Box = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
@@ -405,6 +406,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
+Box = "~1.0.1"
 CSV = "~0.10.14"
 CategoricalArrays = "~0.10.8"
 DataFrames = "~1.6.1"
@@ -421,7 +423,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "d3aa83408c797011b4e9a6777a7562061f5a44e9"
+project_hash = "7f91ea425e723dd8a84b0f2cf5141f3a9ae8561d"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -482,6 +484,12 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 git-tree-sha1 = "2dc09997850d68179b69dafb58ae806167a32b1b"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
 version = "0.1.8"
+
+[[deps.Box]]
+deps = ["Markdown"]
+git-tree-sha1 = "d1bb190a6c0f8eec339173350c77d7d87ab900c8"
+uuid = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
+version = "1.0.1"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1954,7 +1962,7 @@ version = "1.4.1+1"
 # ╔═╡ Cell order:
 # ╠═e39c88ab-fb14-45ac-9d17-5ecdd0fbe00d
 # ╠═1a526bdd-08e6-4850-8d20-e4174979db84
-# ╟─9f7d8622-45df-4737-8741-66efcd684776
+# ╠═7ceb9b5d-e323-4828-9582-65e460a370bd
 # ╟─e63c824a-e36b-409b-bdf1-ceb59ba2254c
 # ╟─bc67e7cf-151a-49da-bf53-e4dbfedec877
 # ╟─c0f6c9d9-5bc7-4b1d-bae8-da6718546501

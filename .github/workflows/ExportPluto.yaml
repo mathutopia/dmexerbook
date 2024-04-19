@@ -50,6 +50,7 @@ jobs:
                   Pkg.add([
                     Pkg.PackageSpec(name="PlutoSliderServer", version="0.3.2-0.3"),
                   ])
+                  Pkg.Registry.add(RegistrySpec(url = "https://github.com/mathutopia/Wlreg.git"))
 
                   import PlutoSliderServer
 
