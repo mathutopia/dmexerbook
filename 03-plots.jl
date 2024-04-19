@@ -14,11 +14,19 @@ macro bind(def, element)
     end
 end
 
+# ╔═╡ 01b0953c-c5b4-4466-9308-33f7793d781d
+begin
+try 
+	using Box
+catch e
+    using Pkg
+	Pkg.Registry.add(RegistrySpec(url = "https://github.com/mathutopia/Wlreg.git"))
+	using Box
+end
+end
+
 # ╔═╡ e39c88ab-fb14-45ac-9d17-5ecdd0fbe00d
 using StatsPlots,CSV, DataFrames,DataFramesMeta,CategoricalArrays,StatsBase, FreqTables,PlutoUI
-
-# ╔═╡ b1cd69c3-1983-4745-ade3-12f3a1a0ece4
-using Box
 
 # ╔═╡ 1a526bdd-08e6-4850-8d20-e4174979db84
 TableOfContents(title = "目录")
@@ -401,6 +409,7 @@ CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataFramesMeta = "1313f7d8-7da2-5740-9ea0-a2ca25f37964"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
@@ -423,7 +432,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "7f91ea425e723dd8a84b0f2cf5141f3a9ae8561d"
+project_hash = "e4f627a71f5c23ef2508ae05887ccd9ad5bacf50"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1960,8 +1969,8 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
+# ╠═01b0953c-c5b4-4466-9308-33f7793d781d
 # ╠═e39c88ab-fb14-45ac-9d17-5ecdd0fbe00d
-# ╠═b1cd69c3-1983-4745-ade3-12f3a1a0ece4
 # ╠═1a526bdd-08e6-4850-8d20-e4174979db84
 # ╟─e63c824a-e36b-409b-bdf1-ceb59ba2254c
 # ╟─bc67e7cf-151a-49da-bf53-e4dbfedec877
