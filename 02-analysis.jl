@@ -5,10 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ cac6a7cd-aade-4eea-b134-529bbc3fe179
-using CSV,DataFrames,PlutoUI,StatsBase,FreqTables,CategoricalArrays 
-
-# ╔═╡ 8dfc4b4b-9092-4f4c-83fb-8ea93602174c
-using ExcelReaders
+using CSV,DataFrames,PlutoUI,StatsBase,FreqTables,CategoricalArrays,XLSX 
 
 # ╔═╡ bf241279-d309-45cc-a10a-20b2f0977a7d
 #=
@@ -116,8 +113,21 @@ julia> ret2 = readxl("data/GermanCredit.xls", "Data!A1:AF1001")
 ```
 """
 
-# ╔═╡ bf47215a-d0e9-4fb7-982f-7669e56cd037
-ret2 = readxl("data/GermanCredit.xls", "Data!A1:AF1001")
+# ╔═╡ 0584a94b-acbf-4280-8d16-501fe2a5f7ac
+md"""
+由于现在XLXS格式的数据更常见， 下面演示XLXS数据的读取。 下面的返回结果表明， 读取的XLSX文件有两个工作簿， 分别为`Data`和`Codelist`。
+"""
+
+# ╔═╡ 57dab2ac-5bcf-44d4-9c56-1d9a32e837d9
+ret2 = XLSX.readxlsx("data/GermanCredit.xlsx")
+
+# ╔═╡ 74572507-6434-41cf-b438-c2cac06561a3
+md"""
+我们可以使用工作簿名字读取相应的工作簿， 然后就可以像处理矩阵一样处理工作簿中的数据。这里不再继续演示， 项进一步了解可以参考包的官方文档。
+"""
+
+# ╔═╡ 25867f8e-807d-4fbd-bf45-1edc32d239a3
+ret2["Data"][1:3, 5:7]
 
 # ╔═╡ 1d170b7c-1d7a-4afd-91f4-8f77808d8f82
 md"""
@@ -440,20 +450,20 @@ Box = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-ExcelReaders = "c04bee98-12a5-510c-87df-2a230cb6e075"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
 Box = "~1.0.1"
 CSV = "~0.10.14"
 CategoricalArrays = "~0.10.8"
 DataFrames = "~1.6.1"
-ExcelReaders = "~0.12.0"
 FreqTables = "~0.4.6"
 PlutoUI = "~0.7.58"
 StatsBase = "~0.34.3"
+XLSX = "~0.10.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -462,7 +472,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "4e5cd79c80932ae462d4a6ba7b95c7c5137f75b5"
+project_hash = "1ced45b5f5a544698fdba88f62ad2dd8b12e32a4"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -542,12 +552,6 @@ deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.0+0"
 
-[[deps.Conda]]
-deps = ["Downloads", "JSON", "VersionParsing"]
-git-tree-sha1 = "e32a90da027ca45d84678b826fffd3110bb3fc90"
-uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
-version = "1.8.0"
-
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
@@ -575,12 +579,6 @@ git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
 uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
 version = "1.0.0"
 
-[[deps.DataValues]]
-deps = ["DataValueInterfaces", "Dates"]
-git-tree-sha1 = "d88a19299eba280a6d062e135a43f00323ae70bf"
-uuid = "e7dc6d0d-1eca-5fa6-8ad6-5aecde8b7ea5"
-version = "0.4.13"
-
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -602,11 +600,11 @@ deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
 
-[[deps.ExcelReaders]]
-deps = ["Conda", "DataValues", "Dates", "PyCall"]
-git-tree-sha1 = "2d13a4a47645c4bb5d5667143e1977bb7970d6ba"
-uuid = "c04bee98-12a5-510c-87df-2a230cb6e075"
-version = "0.12.0"
+[[deps.EzXML]]
+deps = ["Printf", "XML2_jll"]
+git-tree-sha1 = "380053d61bb9064d6aa4a9777413b40429c79901"
+uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+version = "1.2.0"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
@@ -676,6 +674,12 @@ git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
 
+[[deps.JLLWrappers]]
+deps = ["Artifacts", "Preferences"]
+git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
+uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
+version = "1.5.0"
+
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
@@ -714,6 +718,12 @@ version = "1.11.0+1"
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
+[[deps.Libiconv_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "f9557a255370125b405568f9767d6d195822a175"
+uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
+version = "1.17.0+0"
+
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -741,12 +751,6 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
 uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
 version = "0.1.4"
-
-[[deps.MacroTools]]
-deps = ["Markdown", "Random"]
-git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
-uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.13"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -834,12 +838,6 @@ version = "2.3.1"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-
-[[deps.PyCall]]
-deps = ["Conda", "Dates", "Libdl", "LinearAlgebra", "MacroTools", "Serialization", "VersionParsing"]
-git-tree-sha1 = "62f417f6ad727987c755549e9cd88c46578da562"
-uuid = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
-version = "1.95.1"
 
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -967,11 +965,6 @@ uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
-[[deps.VersionParsing]]
-git-tree-sha1 = "58d6e80b4ee071f5efd07fda82cb9fbe17200868"
-uuid = "81def892-9a0e-5fdd-b105-ffc91e053289"
-version = "1.3.0"
-
 [[deps.WeakRefStrings]]
 deps = ["DataAPI", "InlineStrings", "Parsers"]
 git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
@@ -982,6 +975,24 @@ version = "1.4.2"
 git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
 uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
 version = "1.6.1"
+
+[[deps.XLSX]]
+deps = ["Artifacts", "Dates", "EzXML", "Printf", "Tables", "ZipFile"]
+git-tree-sha1 = "319b05e790046f18f12b8eae542546518ef1a88f"
+uuid = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
+version = "0.10.1"
+
+[[deps.XML2_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
+git-tree-sha1 = "532e22cf7be8462035d092ff21fada7527e2c488"
+uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
+version = "2.12.6+0"
+
+[[deps.ZipFile]]
+deps = ["Libdl", "Printf", "Zlib_jll"]
+git-tree-sha1 = "f492b7fe1698e623024e873244f10d89c95c340a"
+uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+version = "0.10.1"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
@@ -1016,8 +1027,10 @@ version = "17.4.0+2"
 # ╟─97f3906e-fa48-4173-b6e3-6d6df054c6f6
 # ╠═1925f8df-7464-4c4c-8dad-dace0d47fffb
 # ╟─83e580e9-a37a-4e6d-8619-7cd4742f541b
-# ╠═8dfc4b4b-9092-4f4c-83fb-8ea93602174c
-# ╠═bf47215a-d0e9-4fb7-982f-7669e56cd037
+# ╟─0584a94b-acbf-4280-8d16-501fe2a5f7ac
+# ╟─57dab2ac-5bcf-44d4-9c56-1d9a32e837d9
+# ╟─74572507-6434-41cf-b438-c2cac06561a3
+# ╠═25867f8e-807d-4fbd-bf45-1edc32d239a3
 # ╟─1d170b7c-1d7a-4afd-91f4-8f77808d8f82
 # ╠═add0096e-5c35-4ee7-9084-378e96649129
 # ╠═a2069fd7-a40c-4121-91b6-36460fa20f5e
