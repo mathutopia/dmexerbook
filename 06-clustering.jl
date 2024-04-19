@@ -4,20 +4,12 @@
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
+# ╔═╡ 3f847b82-2175-498a-9ef7-f85a50432733
+begin
+using PlutoUI, Distances,Clustering, CSV, DataFrames, Distances, DataFramesMeta,StatsBase,StatsPlots
 end
 
-# ╔═╡ e39c88ab-fb14-45ac-9d17-5ecdd0fbe00d
-using StatsPlots,CSV, DataFrames,DataFramesMeta,CategoricalArrays,StatsBase, FreqTables,PlutoUI
-
-# ╔═╡ 01f33d8e-2d18-4ee7-8b77-d5bd10b71fe4
+# ╔═╡ c9ff268b-0c31-4cea-b690-cb55ad8b24fa
 #=
 下面的包Box并没有在Julia的通用注册中心注册。主要用于排版。如果要使用该包， 需要首先安装一个非通用的注册中心， 即在RPEL中执行如下代码即可。
 ```julia
@@ -29,387 +21,525 @@ end
 =#
 using Box
 
-# ╔═╡ e63c824a-e36b-409b-bdf1-ceb59ba2254c
+# ╔═╡ 70ec76d1-638c-4bb9-80ab-69bb33450baf
 md"""
-实验3 数据可视化
+实验6 聚类分析
 """ |> shiyan
 
-# ╔═╡ bc67e7cf-151a-49da-bf53-e4dbfedec877
+# ╔═╡ e4e623dc-0717-421a-9d38-111833ab5711
 md"""
-# **实验目的**
-1. 理解常见统计图形的含义
-2. 掌握常见统计图形的绘制
-3. 掌握调整图形的重要参数
+# **实验目的：**
+1. 掌握常见的距离计算方法
+2. 掌握kmeans聚类分析方法
+3. 掌握DBSCAN分析方法
+4. 掌握一趟聚类算法
 """ |> box()
 
-# ╔═╡ c0f6c9d9-5bc7-4b1d-bae8-da6718546501
+# ╔═╡ bf7e4c5a-4f7f-4a99-a6b0-6a225b5a43a3
 md"""
 # 知识链接：
-1. 常见统计图形（饼图、散点图、折线图、柱状图、雷达图、箱线图）
+1. 聚类问题简介
+2. 常见距离计算
+3. kmeans算法
+4. BIRCH算法
+5. DBSCAN算法
+6. 一趟聚类算法
 """ |> box()
 
-# ╔═╡ 07ec0b05-fc38-4d39-aa64-426d04953114
+# ╔═╡ 139f007f-31be-4ae6-9d67-c6917ea01f3d
 md"""
-# Plots.jl包简介
-数据可视化分析是在做数据挖掘之前要做的很重要的一件事。 通过可视化可以建立对数据分布情况的直观印象。 这里主要介绍 [Plots.jl](https://docs.juliaplots.org/stable/)包的简单使用。
+# 实验步骤：
+下面先加载用到的包。
+"""
 
-Plots.jl是一个为了简化作图而诞生的包。 简单来说， 在Julia中，有很多绘图包，他们有各自的特点和语法。 Plots.jl存在的目的是简化绘图。他打造一套相同的语法，进而将绘图指令翻译给不同的包（后端）把图形绘制出来。 Plots.jl支持很多后端， 但具有相同的前端。 
+# ╔═╡ ea3e25cd-0744-4c03-b1c3-57031a98ba4f
+ret = CSV.read("data/air_data.csv",DataFrame)
 
-默认情况下， 使用的是GR后端。
+# ╔═╡ 864ee807-e20c-4fa6-bafc-22b629a9caf4
+md"""
+## 数据集介绍
+本实验使用航空客户数据集做有关分析， 下面简要介绍一下数据集。该数据是某航空公司已积累的大量的会员档案信息和其乘坐航班记录，经加工后得到的部分数据信息。该数据集包含$(size(ret)[1]) 条记录， 共 $(size(ret)[2]) 个字段。
 
-## 调用方法
-在Plots.jl里，最核心的绘图函数只有一个`plot()`。 其调用方法有如下三种：
+其中主要字段的含义如下表所示：
 
+|        | 属性名称                    | 属性说明                                      |
+|--------|-------------------------|-------------------------------------------|
+| 客户基本信息 | MEMBER\_NO               | 会员卡号                                      |
+|        | FFP\_DATE                | 入会时间                                      |
+|        | FIRST\_FLIGHT\_DATE       | 第一次飞行日期                                   |
+|        | GENDER                  | 性别                                        |
+|        | FFP\_TIER                | 会员卡级别                                     |
+|        | WORK\_CITY               | 工作地城市                                     |
+|        | WORK\_PROVINCE           | 工作地所在省份                                   |
+|        | WORK\_COUNTRY            | 工作地所在国家                                   |
+|        | AGE                     | 年龄                                        |
+|--------|-------------------------|-------------------------------------------|
+| 乘机信息   | FLIGHT\_COUNT            | 观测窗口内飞行次数                                 |
+|        | AVG\_FLIGHT\_COUNT        | 观测窗口内平均飞行次数（飞行次数/8）                       |
+|        | P1Y\_Flight\_Count        | 观测窗口内第1年飞行次数                              |
+|        | L1Y\_Flight\_Count        | 观测窗口内第2年飞行次数                              |
+|        | Ration\_P1Y\_Flight\_Count | 观测窗口内第1年飞行次数占比                            |
+|        | Ration\_L1Y\_Flight\_Count | 观测窗口内第2年飞行次数占比                            |
+|        | SUM\_YR                  | 观测窗口的票价支出                                 |
+|        | SUM\_YR\_1                | 第1年票价支出                                   |
+|        | SUM\_YR\_2                | 第2年票价支出                                   |
+|        | AVG\_DISCOUNT            | 平均值折扣率                                    |
+|        | SEG\_KM\_SUM              | 观测窗口的总飞行公里数                               |
+|        | WEIGHTED\_SEG\_KM         | (=SEG\_KM\_SUM*AVG\_DISCOUNT)                |
+|        | LOAD\_TIME               | 观测窗口结束时间                                  |
+|        | LAST\_FLIGHT\_DATE        | 末次飞行日期                                    |
+|        | LAST\_TO\_END             | 最后一次乘机时间至观测窗口结束天数                         |
+|        | BEGIN\_TO\_FIRST          | 第一次飞行时间距窗口起始期的天数                          |
+|        | AVG\_INTERVAL            | 平均乘机时间间隔                                  |
+|        | MAX\_INTERVAL            | 最大乘机时间间隔                                  |
+|--------|-------------------------|-------------------------------------------|
+| 积分信息   | EXCHANGE\_COUNT          | 积分兑换次数                                    |
+|        | POINTS\_SUM              | 总累计积分(=EP\_SUM+BP\_SUM+ADD\_Point\_SUM)       |
+|        | POINT\_NOTFLIGHT         | 非乘机积分变动次数                                 |
+|        | BP\_SUM                  | 总基本积分                                     |
+|        | P1Y\_BP\_SUM              | 第1年基本积分                                   |
+|        | L1Y\_BP\_SUM              | 第2年基本积分                                   |
+|        | Ration\_P1Y\_BPS          | 第1年基本积分占比                                 |
+|        | Ration\_L1Y\_BPS          | 第2年基本积分占比                                 |
+|        | AVG\_BP\_SUM              | 平均总基本积分(=总基本积分/8)                         |
+|        | EP\_SUM                  | 总精英积分                                     |
+|        | EP\_SUM\_YR\_1             | 第1年精英积分                                   |
+|        | EP\_SUM\_YR\_2             | 第2年精英积分                                   |
+|        | ADD\_Point\_SUM           | 附加积分                                      |
+|        | ADD\_POINTS\_SUM\_YR\_1     | 第1年附加积分                                   |
+|        | ADD\_POINTS\_SUM\_YR\_2     | 第2年附加积分                                   |
+|        | Eli\_Add\_Point\_Sum       | (=ADD\_POINTS\_SUM\_YR\_1+L1Y\_ELi\_Add\_Points) |
+|        | L1Y\_Eli\_Add\_Points      |                                           |
+|        | L1Y\_Points\_Sum          |
+
+
+注：观测窗口是指以过去某个时间点为结束时间，某一时间长度作为宽度，得到历史时间范围内的一个时间段。
+
+下面首先读取该数据集。
+"""
+
+# ╔═╡ 52275bf8-330a-46c5-b6d8-4137ce1031d8
+md"""
+由于数据中包含多个字段， 我们选择部分字段做下列实验演示。 主要选择的字段是： 平均飞行次数（AVG\_FLIGHT\_COUNT）， 最近消费间隔时间（LAST\_TO\_END）， 加权里程数（WEIGHTED\_SEG\_KM）和平均基本积分（AVG\_BP\_SUM）。
+
+由于各个字段在量纲上存在显著差异， 我们将每个字段做最大最小规范化， 并分别重命名为cnt,time,km, bp。
+"""
+
+# ╔═╡ 2d63e2c5-44e9-4d54-b199-f3a3c8013048
+maxmin(x) = (x .- minimum(x))./(maximum(x) - minimum(x))
+
+# ╔═╡ 62957610-c7f8-4e43-9ce3-a5372432ecb1
+data = @select ret :cnt= maxmin(:AVG_FLIGHT_COUNT) :time = maxmin(:LAST_TO_END) :km = maxmin(:WEIGHTED_SEG_KM) :bp = maxmin(:AVG_BP_SUM)
+
+# ╔═╡ 7d874820-7e3f-11ec-1087-dd819d253f23
+md"""
+## 任务1： 距离计算
+做聚类分析以及各种数据挖掘， 距离都是很重要的一个概念， 这里以以及相关的julia包[**Distances.jl**](https://github.com/JuliaStats/Distances.jl)总结一下有关的距离的计算。 
+
+"""
+
+# ╔═╡ 41eb25f8-8a10-4f78-9373-dd79f95c87f2
+md"""
+### 计算方式
+"""
+
+# ╔═╡ 3012af0f-f52d-4212-a5a7-c8f97485ea5c
+md"""
+最常见的计算距离的方式是： 用某种距离函数， 去计算两个向量的距离。 假定`x,y`是两个需要计算距离的向量， 距离计算的基本方法是：
 ```julia
-plot(args...; kw...)     
-plot!(args...; kw...)       
-plot!(plt, args...; kw...)         
+r = distfun(x,y)
 ```
-第一种是最基础的绘图函数， 通过给定绘图**数据（args）**， 指定图形相关的**属性（kw...）**就可以了。这个函数返回的是一个图形对象。 图形对象不见得会显示出来， 只有当我们去display一个图形对象的时候才能看得到。 只是一般情况下， 在REPL环境下会自动显示。 在Pluto的cell里， 图形对象也会默认显示。
-
-第二个函数增加了一个惊叹号“！”， 表示它主要用于修改（不是新建）当前的图形对象。 第三个方法跟第二个类似， 也是修改已有的图形对象， 但需要指定修改的是哪一个图形对象（plt）。
-
-请注意， 绘图函数中**位置参数**表示**数据**， **关键字参数**表示绘图**属性**。
-
-
-"""
-
-# ╔═╡ 4b01f41f-f84f-4357-aa74-7df34c94c56b
-md"""
-## 输入数据
-一般情况下，  
-- 给定一个数据源（一个变量）， plot(y): 会将这个数据源解释为y值， 然后自动生成x值去绘图, x值默认就是值的索引。
-- 同时给定多个数据源时（多个变量）， plot(x, y)画二维图形， plot(x, y, z) 画3维图形。
-
-有几个地方需要注意的是： 如果输入的数据是 $n \times k$ **矩阵**， 默认情况下则是画 k 个序列， 也就是每一列当成一个序列去画图。 这个原则在给图形的属性赋值的时候也成立， 即向量形式的属性会作用到每一个序列的相应的点上去， 而矩阵形式的属性， 每一列分别作用到不同的序列上去。 仔细对比下面两幅图形就明白了。
+其中， `distfun`表示某种距离计算函数，是Distances.jl提供的一种简便调用方式， 比如欧式距离函数是：`euclidean`。 因此， 可以这样计算两个向量的距离：
 ```julia
-plot(rand(10,4), markershape = [:circle, :rect])
-plot(rand(10,4), markershape = [:circle  :rect])
+r = euclidean(x,y)
 ```
-上面两个命令都是一个变量（$10\times 4$矩阵）绘图。所以序列的数量是矩阵的列数， 对应的x坐标是数据的行索引。 它们不同的地方是：我们设置markershape属性，一个采用了向量[:circle, :rect]形式， 一个采用的是一行的矩阵 [:circle  :rect]。 这个属性用于设置点的形状。 从效果看， 这些设置都会被重复使用， 但向量形式的设置是点的重复， 而矩阵形式会在列上重复。
+
+更通用的距离计算方式是：
+```
+r = evaluate(dist, x, y)
+r = dist(x, y)
+```
+其中`dist`是某种距离类型的实例， 比如欧式距离对应的类型是`Euclidean.`, 欧式距离可计算如下：
+```julia
+r = evaluate(Euclidean(), x, y)
+r = Euclidean()(x, y)
+```
+
+
+
 """
 
-# ╔═╡ 8e5a91a2-2543-4b42-b093-bd0cd8c865d9
-plot(rand(10,4), markershape = [:circle, :rect])
-
-# ╔═╡ 4feb5c13-e751-40e1-aa99-f855f95c6958
-plot(rand(10,4), markershape = [:circle :rect])
-
-# ╔═╡ 2d448051-2962-4960-8b8c-29b14fb19930
+# ╔═╡ 1bd83605-0cbe-4908-8044-15ee8470c321
 md"""
-## 绘图属性 Plot Attributes
-图形不只是简单的线条， 还有许多的属性可以设置从而丰富图形的表现力。 由于[属性](https://docs.juliaplots.org/stable/attributes/)通常会非常多， 我们可以在需要用到的时候再具体去查属性的名称和设置方法。 
+上面的计算方式每次只能计算两个向量的距离。如果同时要计算多个向量的距离，有下面两种方式。下面假定`X`和`Y`分别是具有`m`列和`n`列的两个具有行数相同矩阵。下面的代码可以实现对两个矩阵的每一对配对求距离`dist`。
+返回结果R是大小为（m,n）的矩阵，使得`R[i,j]`是`X[:,i]`和`Y[:,j]`之间的距离。使用成对函数计算所有对的距离通常比单独计算每对的距离快得多。
+```julia
+R = pairwise(dist, X, Y, dims=2)
+```
 
-下面介绍一些在绘图中常用的属性。
-
-- 在绘图的[序列方面](https://docs.juliaplots.org/stable/generated/attributes_series/)： 可能需要设置：
-  - 序列类型seriestype（本质上就是图形类型）
-  - 线型linestyle 
-  - 线宽linewidth 
-  - 线颜色linecolor 这里可以查[颜色名字](https://github.com/JuliaGraphics/Colors.jl/blob/master/src/names_data.jl)
-  - markershape
-
-- 图形本身的属性
-  - DPI
-  - size
-  - fontfamily
-
-- 坐标轴的属性
-  - xlabel
-  - ylabel
-  - title
-
-以及是否需要图例：lengend
-
-为了显示汉字， 在绘图的时候使用了fontfamily = "Times Roman"。  如果想了解一些PlutoUI的控件的使用， 可以参考[这里](fontfamily = "Times Roman").
-
+如果`X`和`Y`是具有 $m\times n$ 列的两个同尺寸矩阵,下面的代码可以计算两个矩阵对应列的距离`dist`
+```julia
+r = colwise(dist, X, Y)
+```
+返回结果r是一个向量。`r[i]`是`X[:,i]`与`Y[:,i]`的距离。
 """
 
-# ╔═╡ ee6d388d-8f88-4262-ac57-e8429dd28d73
+# ╔═╡ 319acc7d-b5ac-421a-b3ea-98d6cd3701de
 md"""
-## 演示一个序列的设置
-下面演示的是一个序列， 这种图形适合去画单个连续变量。
+### 距离类型与函数
+每个距离对应一个距离类型， 有一个相应的方便调用的函数。 下表列出了距离的类型名、相应函数及对应的距离计算数学表达式。 当然，这里的数学表达式只是说明距离是如何被计算的，并不意味着系统是这么实现的。事实上， 包中实现的距离计算效率要比这里的函数实现高。
+
+| type name            |  convenient syntax                | math definition     |
+| -------------------- | --------------------------------- | --------------------|
+|  Euclidean           |  `euclidean(x, y)`                | `sqrt(sum((x - y) .^ 2))` |
+|  SqEuclidean         |  `sqeuclidean(x, y)`              | `sum((x - y).^2)` |
+|  PeriodicEuclidean   |  `peuclidean(x, y, w)`            | `sqrt(sum(min(mod(abs(x - y), w), w - mod(abs(x - y), w)).^2))`  |
+|  Cityblock           |  `cityblock(x, y)`                | `sum(abs(x - y))` |
+|  TotalVariation      |  `totalvariation(x, y)`           | `sum(abs(x - y)) / 2` |
+|  Chebyshev           |  `chebyshev(x, y)`                | `max(abs(x - y))` |
+|  Minkowski           |  `minkowski(x, y, p)`             | `sum(abs(x - y).^p) ^ (1/p)` |
+|  Hamming             |  `hamming(k, l)`                  | `sum(k .!= l)` |
+|  RogersTanimoto      |  `rogerstanimoto(a, b)`           | `2(sum(a&!b) + sum(!a&b)) / (2(sum(a&!b) + sum(!a&b)) + sum(a&b) + sum(!a&!b))` |
+|  Jaccard             |  `jaccard(x, y)`                  | `1 - sum(min(x, y)) / sum(max(x, y))` |
+|  BrayCurtis          |  `braycurtis(x, y)`               | `sum(abs(x - y)) / sum(abs(x + y))`  |
+|  CosineDist          |  `cosine_dist(x, y)`              | `1 - dot(x, y) / (norm(x) * norm(y))` |
+|  CorrDist            |  `corr_dist(x, y)`                | `cosine_dist(x - mean(x), y - mean(y))` |
+|  ChiSqDist           |  `chisq_dist(x, y)`               | `sum((x - y).^2 / (x + y))` |
+|  KLDivergence        |  `kl_divergence(p, q)`            | `sum(p .* log(p ./ q))` |
+|  GenKLDivergence     |  `gkl_divergence(x, y)`           | `sum(p .* log(p ./ q) - p + q)` |
+|  RenyiDivergence     |  `renyi_divergence(p, q, k)`      | `log(sum( p .* (p ./ q) .^ (k - 1))) / (k - 1)` |
+|  JSDivergence        |  `js_divergence(p, q)`            | `KL(p, m) / 2 + KL(q, m) / 2 with m = (p + q) / 2` |
+|  SpanNormDist        |  `spannorm_dist(x, y)`            | `max(x - y) - min(x - y)` |
+|  BhattacharyyaDist   |  `bhattacharyya(x, y)`            | `-log(sum(sqrt(x .* y) / sqrt(sum(x) * sum(y)))` |
+|  HellingerDist       |  `hellinger(x, y)`                | `sqrt(1 - sum(sqrt(x .* y) / sqrt(sum(x) * sum(y))))` |
+|  Haversine           |  `haversine(x, y, r = 6_371_000)` | [Haversine formula](https://en.wikipedia.org/wiki/Haversine_formula) |
+|  SphericalAngle      |  `spherical_angle(x, y)`          | [Haversine formula](https://en.wikipedia.org/wiki/Haversine_formula) |
+|  Mahalanobis         |  `mahalanobis(x, y, Q)`           | `sqrt((x - y)' * Q * (x - y))` |
+|  SqMahalanobis       |  `sqmahalanobis(x, y, Q)`         | `(x - y)' * Q * (x - y)` |
+|  MeanAbsDeviation    |  `meanad(x, y)`                   | `mean(abs.(x - y))` |
+|  MeanSqDeviation     |  `msd(x, y)`                      | `mean(abs2.(x - y))` |
+|  RMSDeviation        |  `rmsd(x, y)`                     | `sqrt(msd(x, y))` |
+|  NormRMSDeviation    |  `nrmsd(x, y)`                    | `rmsd(x, y) / (maximum(x) - minimum(x))` |
+|  WeightedEuclidean   |  `weuclidean(x, y, w)`            | `sqrt(sum((x - y).^2 .* w))`  |
+|  WeightedSqEuclidean |  `wsqeuclidean(x, y, w)`          | `sum((x - y).^2 .* w)`  |
+|  WeightedCityblock   |  `wcityblock(x, y, w)`            | `sum(abs(x - y) .* w)`  |
+|  WeightedMinkowski   |  `wminkowski(x, y, w, p)`         | `sum(abs(x - y).^p .* w) ^ (1/p)` |
+|  WeightedHamming     |  `whamming(x, y, w)`              | `sum((x .!= y) .* w)`  |
+|  Bregman             |  `bregman(F, ∇, x, y; inner=dot)` | `F(x) - F(y) - inner(∇(y), x - y)` |
 """
 
-# ╔═╡ 99a8245c-4e8e-47cd-b5ce-3bd65368e4ee
+# ╔═╡ d79fd59e-ef0b-4b12-b4cf-6526020b8167
+md"""
+### 典型距离计算
+下面几个距离是常见的
+
+| type name            |  convenient syntax                | math definition     |
+| -------------------- | --------------------------------- | --------------------|
+|  Euclidean           |  `euclidean(x, y)`                | `sqrt(sum((x - y) .^ 2))` |
+|  SqEuclidean         |  `sqeuclidean(x, y)`              | `sum((x - y).^2)` |
+|  Cityblock           |  `cityblock(x, y)`                | `sum(abs(x - y))` |
+|  TotalVariation      |  `totalvariation(x, y)`           | `sum(abs(x - y)) / 2` |
+|  Chebyshev           |  `chebyshev(x, y)`                | `max(abs(x - y))` |
+|  Minkowski           |  `minkowski(x, y, p)`             | `sum(abs(x - y).^p) ^ (1/p)` |
+|  Jaccard             |  `jaccard(x, y)`                  | `1 - sum(min(x, y)) / sum(max(x, y))` |
+|  CosineDist          |  `cosine_dist(x, y)`              | `1 - dot(x, y)` / (norm(x) * norm(y))` |
+|  CorrDist            |  `corr_dist(x, y)`                | `cosine_dist(x - mean(x), y - mean(y))` |
+|  ChiSqDist           |  `chisq_dist(x, y)`               | `sum((x - y).^2 / (x + y))` |
+|  KLDivergence        |  `kl_divergence(p, q)`            | `sum(p .* log(p ./ q))` |
+
+
+
+"""
+
+# ╔═╡ be29c6d4-8d37-439b-9111-9adcbda40582
+md"""
+注意区分距离和相似度。比如， 我们有余弦相似度， 余弦距离是`1-余弦相似度`。类似的， 我们有相关系数（用于表示线性相关性），其值通常在[-1,1]中，而相关性距离CorrDist， 则只能为正数，因此范围是[0,2]
+""" |> box(:yellow, :注意)
+
+# ╔═╡ deb39e3e-139a-4d1f-8b56-4fb888060018
+md"""
+下面的代码演示计算第1、2号样本的欧式距离的计算。
+"""
+
+# ╔═╡ 130bc63c-90ad-4076-bf55-e16f92ee6520
+euclidean(data[1,:], data[2,:])
+
+# ╔═╡ a57b8a91-44d9-48ce-be6a-005b645f57a5
+md"""
+如果想要一次性多计算几个样本， 需要首先将样本的特征表示为矩阵形式。这可以通过将样本对应的数据框放入矩阵类型（Matrix）的构造函数去构造。 此外， 计算距离时，通常将矩阵的列视为样本。 因此， 转换后的特征矩阵，需要做一个转置操作。
+
+下面计算1~10号样本与11~20号样本的欧式距离。
+"""
+
+# ╔═╡ 9e354aa0-5092-4fda-8919-84b9c6618e00
+colwise(euclidean, Matrix(data[1:10,:])',Matrix(data[11:20,:])')
+
+# ╔═╡ b760559b-2335-4c23-99a1-82747d64914c
+md"""
+更常见的一个场景是， 计算所有样本两两之间的距离。这可以通过`pairwise`函数实现。 不过，这时候需要注意的一个问题是， $n$个样本会产生$n^2$个距离。如果样本数量太多， 很容易导致内存不足。下面的代码计算了前100个样本两两之间的欧式距离。
+"""
+
+# ╔═╡ 4cfe738b-1995-4233-8546-471e7195b03b
+pairwise(euclidean, Matrix(data[1:100,:])')
+
+# ╔═╡ 5f6f8819-8793-47bc-8037-872a6900ece0
+size(data)
+
+# ╔═╡ 88093475-0f2b-4120-9748-36f73ddc0b24
+md"""
+由于后面的任务都需要进行类似的操作， 下面我们首相将数据准备成矩阵的形式。
+"""
+
+# ╔═╡ 3e11f98b-373a-4186-a71b-54a042735f2a
+X = Matrix(data)' # 注意这里的转换为矩阵并转置
+
+# ╔═╡ bf19eb1c-5bc5-4c53-8561-3920cf788327
+md"""
+## 任务2 一趟聚类
+一趟聚类的思想很简单， 下面的代码实现一个简单的一趟聚类算法。 首先定义了一个结构体Cluster， 用于表示一个簇。 结构体会记录该簇包含了哪些样本（用id向量表示）， 以及簇的中心（用center表示）。 簇的中心是所有样本的均值向量。
+"""
+
+# ╔═╡ bb5090de-0443-4a79-8dda-5a09a43c6eba
+mutable struct Cluster
+	id # 用于记录簇中有哪些样本。
+	center# 用于记录簇的中心向量
+end
+
+# ╔═╡ 1be189bf-4a2f-4fcd-bb94-4a3297fb1e51
 begin
-x = 0:0.5:2pi
-y = sin.(x)
-end;
+# X是输入数据， 要求为k*n矩阵， k是特征维度，n为样本数量。r是构建簇的阈值。
+function onepass(X,r; dist = SqEuclidean())
+	ret = Cluster[]
+	push!(ret, Cluster([1], X[:,1]))# 第一个样本先建立一个簇
+	for (i,x) in enumerate(eachcol(X[:,2:end]))# 从第2个样本开始
+		ds = [dist(x, c.center) for c in ret]#求每个样本跟已有簇之间的距离。
+		(dm, k) = findmin(ds)# 求出最小距离簇的编号与对应最小距离
+		if dm > r # 最小距离比阈值要大
+			push!(ret, Cluster([i+1],x))# 新建一个簇， 
+		else
+			n = length(ret[k].id)
+			push!(ret[k].id, i+1)
+			ret[k].center = (n .* ret[k].center .+ x)./(n+1)
+		end
+	end
+	return ret
+end
 
-# ╔═╡ 0181490a-0930-4153-8260-b82f9c3d0ab1
+end
+
+# ╔═╡ 84735154-7ff5-4bb1-8d22-a4226e4c448b
 md"""
-` seriestype = ` $(@bind seriestype Select([:line, :path, :steppre, :stepmid, :steppost, :sticks, :scatter, :heatmap, :hexbin, :barbins, :barhist, :histogram, :scatterbins, :scatterhist, :stepbins, :stephist, :bins2d, :histogram2d, :histogram3d, :density, :bar, :hline, :vline, :contour, :pie, :shape, :image, :path3d, :scatter3d, :surface, :wireframe, :contour3d, :volume, :mesh3d] ))
-` linestyle = ` $(@bind linestyle Select([:auto, :solid, :dash, :dot, :dashdot, :dashdotdot]))
-` linewidth = ` $(@bind linewidth Slider(1:10))
-` linecolor = ` $(@bind linecolor Select([:black, :blue, :red, :green]))
-` markershape = ` $(@bind markershape Select([:auto, :circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross, :utriangle, :dtriangle, :rtriangle, :ltriangle, :pentagon, :heptagon, :octagon, :star4, :star6, :star7, :star8, :vline, :hline, :+, :x]))
-` markersize = ` $(@bind markersize NumberField(1:20, default=5))
-` lengend = ` $(@bind lengend CheckBox())
+下面的代码以阈值r=0.1构建簇，
+"""
 
-` xlabel = ` $(@bind xlabel TextField(default = "sd"))
-` ylabel = ` $(@bind ylabel TextField(default = "y 轴"))
-` title = ` $(@bind title TextField(default = "y 轴"))
-` width_px = ` $(@bind width_px NumberField(400:800, default=400))
-` height_px = ` $(@bind height_px NumberField(400:800, default=400))
+# ╔═╡ e6199349-13bf-4efe-af3c-01c6dccab74c
+clu = onepass(X, 0.1)
+
+# ╔═╡ 6208466b-d86d-4b0b-99b5-bfa2baabb3b9
+md"""
+由于返回结果是一个簇的向量， 可以通过这个向量方便的获得想要的结果。比如，可以通过`length`函数，获得最终生成的簇的数量。 下面的代码返回每个簇的样本个数。
+"""
+
+# ╔═╡ a10f2c4b-89ec-4175-a3a4-5ba273520f40
+[length(c.id) for c in clu]
+
+# ╔═╡ 3bf510ec-f3c9-4b3d-bac1-19a9ea386a54
+md"""
+## 任务3 kmeans聚类
+K-Means聚类分析的目标是把数据集D中的样本聚成k个簇， 使得每个样本指派给距离最近的簇， 每个样本与簇之间的距离和（总损失）最小。K-Means聚类可以用kmeans函数实现。
 
 """
 
-# ╔═╡ e5014c07-1550-4299-9f6e-632df6779789
-plot(y, seriestype = seriestype, linestyle = linestyle, linecolor = linecolor,linewidth=linewidth, markershape = markershape,markersize = markersize, legend=lengend, xlabel = xlabel, ylabel = ylabel,  dpi = 100, size = (width_px, height_px), title  = title, fontfamily = "Times Roman")
-
-# ╔═╡ 70aab8fe-5245-445c-a356-15f15fc07909
+# ╔═╡ 8e085543-c0f3-45b8-9c09-de76e9069be2
 md"""
-在上面的实验中， 许多属性都是容易理解的。相对比较不好理解的是seriestype属性。这个属性其实定义了图形的类型。 不同的seriestype， 代表着不同种类的图形。 可以在[**这里**](https://docs.juliaplots.org/stable/generated/attributes_series/)找到所有可以设置的参数及其对应的取值。
-"""
-
-# ╔═╡ b911d17e-7a3a-4bd9-be2a-547ac3e20ee6
-md"""
-## 数据框绘图
-在数据分析的场景， 我们面对的数据通常是数据框（dataframe）的形式。因而，一个直接的需求是能够直接基于dataframe作图。 这个功能可以基于`@df`宏实现。 这样， 可以直接将dataframe里面的名字当成变量去画图。
-
-```julia
-@df df plot(...)
+### kmeans聚类函数
+kmeans的函数签名如下：
 ```
-
-上面介绍的是一些通用的画图方法。对数据分析来说， 有时候我们需要更多的是带有统计特色的图形。可以参考[StatsPlots.jl](https://github.com/JuliaPlots/StatsPlots.jl)包了解常见的统计图形及其画法。上面的宏@df也来自改包。 如果加载了StatsPlots包， 就不再需要Plots包了。
-
-
-"""
-
-# ╔═╡ bb2ac23c-e9c7-487c-a10c-e38747444ea2
-md"""
-# 实验步骤 
-下面的代码先读取后续用到的数据。这是一个贷款数据集， 包含1000个样本，32个字段。
-"""
-
-# ╔═╡ d79fea58-f625-4e10-8c1a-9c6daf758692
-ret = CSV.read("data/GermanCredit.csv", DataFrame);
-
-# ╔═╡ 4cfbf68e-43a9-428e-9936-f2fa65130d5c
-md"""
-## 任务1：单变量可视化
-### 单个类别变量
-对于类别变量， 一个常见的可视化图形是直方图。画直方图需要提供两个向量数据。一个用于表示直方的标签(相当于x值)， 另一个用于表示直方的高度（相当于y值）。直方图的序列类型是:bar, 即`seriestype = :bar`或简写为`st = :bar`。
-
-下面以客户当前工作持续的年限（EMPLOYMENT）的分布情况（0：失业; 1： <1 年； 2： 1<=... <4年； 3： 4<=...<7年； 4：>=7年）作直方图。
-"""
-
-# ╔═╡ b8a0a94a-d1f7-4ac1-9380-088168e5e04a
-md"""
-首先， 通过`countmap`函数获得字段可能取值与对应出现次数的统计结果—字典`dt`。
-"""
-
-# ╔═╡ 5118a9c6-15ab-4190-9be1-8bf50fbcda4a
-dt = countmap(ret.EMPLOYMENT)
-
-# ╔═╡ 1e80bcdc-ed2c-419c-a2f1-a43e1f6405f9
-md"""
-接下来， 从统计结果中取出相应的值， 放入`plot`函数。 
-"""
-
-# ╔═╡ 82fab222-290f-441f-a251-aebba0a39354
-plot(collect(keys(dt)),collect(values(dt)), st = :bar)
-
-# ╔═╡ a7424d22-3557-44a9-8051-0c292106387d
-md"""
-这里`keys`和`values`函数分别用于获取返回字典的键和值， 它们分别对应EMPLOYMENT字段的可能取值及其相应的出现次数。 `collect`函数用于将相应的值搜集到数组中， 方便画图函数调用。 
-""" |> box(:green, :注)
-
-# ╔═╡ 9af2bd7e-39a5-4654-b764-5a37bbab3c05
-md"""
-上面的图形过于简单， 下面对图形的几个属性做一个简单设置。 为了方便起见， 我们首先将绘图用到的数据准备好， 主要是对应x坐标的当前工作持续的年限（EMPLOYMENT）取值（year）， 对应y轴的人数（cnt）。此外， 为了给x的每一个取值重新分配一个标签， 准备了一个由取值范围及标签向量构成的元组。
-"""
-
-# ╔═╡ 200b8b9a-7fb4-4a14-83f0-a47d72863f25
-begin
-year = collect(keys(dt))
-cnt = collect(values(dt))
-tks = (0:4, ["失业"," <1 年", "1<=... <4年", "4<=...<7年" ,">=7年"])
-end;
-
-# ╔═╡ b693d610-5ad5-49b3-b333-9d658ae229af
-plot(year, cnt, 
-	st = :bar, 
-	legend = false,
-	ann = (year, cnt .+ 10 , cnt),
-	ylim = (0, 360),
-	xticks =tks,
-	fontfamily = "宋",
-	fillcolor = :blue,
-	title = "当前工作持续的年限（EMPLOYMENT）",
-	xlabel = "工作年限",
-	ylabel = "人数"
-)
-
-# ╔═╡ c242eac5-14c3-48c4-a28e-f0c4ad494fb8
-md"""
-上面的设置是直观的， 下面稍作解释
-- `st:` 序列类型（seriestype）的简写。设置为一个符号Symbol`:bar`或者字符串`"bar"`,都是可以的。后面的很多设置也是类似的。既可以用符号， 也可以用字符串。
-- `legend = false:` 不需要图例。
-- `ann` 是annotations属性的缩写。 这个属性用于在图形中做一些标注信息。上面条形上的数字， 就是标注的信息。 信息通常是三元组的形式：(x, y, text)表示在坐标（x, y）处画出text的内容。 由于我们要在条形图的每一个条形上面画出对应的数字。 他们对应的x坐标就是year, y坐标是：cnt+10, 加上10的目的是让数字比条形高一点。 这里提供的是三个向量。
-- `ylim = （0,360）`是将y轴的范围设置为（0,360）， 因为默认的范围会让我们画出的有一个数字显示不出来。
-- `xticks =tks`用于将x轴的刻度标签设置为给定的值。这里刻度和标签是两个一一对应的向量。
-- `fontfamily`用于设置图形中文字的字体。这里做设置是因为默认的字体无法显示汉字。
-- `fillcolor`用于设置图形的颜色。
-- `title` 用于设置图形的标题。 
-- `xlabel/ylabel`分别用于设置图形的x、y轴标题。
-"""
-
-# ╔═╡ 1103886c-b91d-43fc-a63d-1c3e60e84e57
-md"""
-饼图是另一种常见的展示单个序列的图形。画饼图很简单， 其需要的数据形式类似条形图。只需要将序列类型改为`:pie`即可。 由于饼图中没有x坐标。这时候提供的x坐标的作用是为饼图提供图例数据来源。 饼图也可以直接使用`pie`函数去画。
-"""
-
-# ╔═╡ dc038072-d2ea-45cb-951b-ad346ad0f118
-plot(["失业"," <1 年", "1<=... <4年", "4<=...<7年" ,">=7年"], cnt, st = :pie,fontfamily = "宋",)
-
-# ╔═╡ 082fd91d-97dc-4674-b8b0-385e908db0a0
-md"""
-### 单个连续变量
-
-下面以分析年龄AGE的分布情况为例， 画出该字段的密度曲线。 密度曲线可以反映字段（变量）在不同位置取值的概率大小。 为了直接使用数据框的列名， 这里使用了宏`@df`。 画密度曲线只需要将序列类型设置为`:density`。如果要正确的显示图例， 需要设置`lebels`字段。 密度曲线也可以使用`density`函数去画。 如果不想要图例， 可设置`legend=false`。
-"""
-
-# ╔═╡ eba9d72d-a028-437e-bbe0-8f81392f6bb9
-@df ret plot(:AGE, st = :density,labels= "AGE")
-
-# ╔═╡ 6c03c3db-e486-4723-bf8b-b2399f8cbd79
-md"""
-直方图是另一种展示单个连续变量的方法。其序列类型是`:hist`。 也可以使用`histgram`函数直接画直方图。
-"""
-
-# ╔═╡ 4afa61e5-c697-4d96-8533-96148d647339
-@df ret plot(:AGE, st = :hist,labels= "AGE")
-
-# ╔═╡ c22912f8-d5c2-4909-ad92-e129f0b316bc
-md"""
-注意观察直方图的y坐标范围，默认情况下， 其显示的是变量某个范围内（直方所在x范围）样本量的数量。要改变y轴的含义， 需要设置参数`normalize`（简写为norm）。该参数默认情况下表示的是所处范围的样本数量。其他可能取值和含义分别是：
- - true/:pdf 离散概率分布函数， 图形总面积为1；
- - :probability 直方高度总和为1； 
- - :density 直方的面积与数量成正比；
-此外， 另一个重要参数， bins， 用于指定计算绘图区间的算法，或者直接给出绘图区间。请读取查看`histogram`函数的帮助文档了解更多细节。
-"""
-
-# ╔═╡ 4abdbb34-7861-487f-9dce-446240e37c3a
-md"""
-箱线图一般也用来查看连续变量的分布情况。 箱线图给出的是5个统计值的图。 线形图的序列类型是`:box`,也可以使用`boxplot`函数去画箱线图。 由于单个序列的箱线图的x轴没有意义。下面的代码将x轴的刻度都隐去了`xticks=[]`。
-"""
-
-# ╔═╡ 37afab46-9099-4b15-b946-5e0e637fe2ba
-@df ret plot(:AGE, st = :box,labels= "AGE", xticks=[])
-
-# ╔═╡ 17a34244-8342-4f02-bbf9-9e6ae6387b3c
-md"""
-## 任务2：两个变量可视化
-"""
-
-# ╔═╡ 46c33a45-0f9d-43fa-90ac-bb00bae83a01
-md"""
-### 两个类别变量
-要同时分析两个类别变量， 一个常见的做法是先做它们的列联表。下表给出的是雇佣年限（EMPLOYMENT）和是否违约（RESPONSE）的列联表。
-"""
-
-# ╔═╡ 297cbadb-36f5-46d4-8c58-961f5d947402
-fm = freqtable(ret, :EMPLOYMENT,:RESPONSE )
-
-# ╔═╡ ed24f4d0-8dcd-4433-8e28-4a43c232ee21
-md"""
-结果是一个命名矩阵，即每一行和列都有相应的名字。 我们可以用names函数提取对应的名字。
-"""
-
-# ╔═╡ 4854489a-0b1f-44f5-968b-30d0cb106254
-names(fm)[1]
-
-# ╔═╡ bea8a9ba-d203-4ccc-b026-8bdc6217b7cc
-names(fm)[2]
-
-# ╔═╡ e8346c20-77f9-4db9-a993-57662f02df04
-md"""
-可以画出他们的条形图， 可以采用`groupedbar`函数。 注意， 这时候的y位置需要一个矩阵， 每一列代表一个条形图。 两个条形图，我们通常可以把他们堆叠在一起(`bar_position = :stack`)，或者挨在一起(`bar_position = :doggle`)。 注意， 两个序列需要先转化为`Matrix`。
-"""
-
-# ╔═╡ a0ccada3-340c-435b-9c7c-240f64e10361
-groupedbar(names(fm)[1], Matrix(fm),  label = ["good" "bad"], bar_position = :doggle )
-
-# ╔═╡ 00bea507-843d-4547-9971-807a43852d45
-md"""
-注： 也可以使用plot函数去画， 但有些后端没有实现条形图的堆叠， 可能导致图形画不出来。如果用plot去画， 可以采用如下函数
-```julia
-julia> plot(Matrix(fm), st=:bar, bar_position = :stack)
+kmeans(X::AbstractMatrix{<:Real},               
+       k::Integer;                              
+       weights::Union{Nothing, AbstractVector{<:Real}}=nothing, 
+       init::Union{Symbol, SeedingAlgorithm, AbstractVector{<:Integer}}             
+       maxiter::Integer=_kmeans_default_maxiter, 
+       tol::Real=_kmeans_default_tol,            
+       display::Symbol=_kmeans_default_display,  
+       distance::SemiMetric=SqEuclidean()) 
 ```
+其中， 
+- X是d×n的特征矩阵， d是特征的维度，n是样本的个数。
+- k是类的个数。
+以上两个参数是位置参数， 必须给定，后面的参数是关键字参数， 都有默认值。
+
+- init:初始类中心， 可以是Symbol,用于指定随机选取中心的方法; 或者长度为k的向量， 用于指定k个中心对应X中的下标。
+- weights: n维向量， 用于指定每个元素的权重。
+- maxiter: 整数， 用于指定最大的迭代次数
+- tol:: 目标值变化的容忍程度， 目标变化小于这个值， 则认为算法收敛了。
+- display: Symbol: 计算过程展示的信息量， 可取如下值： 
+		- :none: 没有展示
+		- :final: 部分信息
+		- :iter: 每一轮迭代的进度信息
+- distance: 计算点之间距离的函数， 默认是平方欧式距离， 表示节点位置差的平方和。
+
+更多的细节请参考（[官方文档](https://juliastats.org/Clustering.jl/stable/kmeans.html)）。
 """
 
-# ╔═╡ cdcb5b84-2c3a-4fdf-955f-7fa91a802c7e
+# ╔═╡ b9034943-31f9-49ab-8ae4-30f76cad2c43
 md"""
-### 一个连续变量+一个类别变量
-这种情况下， 通常是按不同的类别去画连续变量的图形。 相当于分析不同类别下， 连续变量的分布。
+上面的参数中，X是d×n的特征矩， 与数据挖掘的数据通常行为样本， 列为特征刚好相反， 需要对原始数据做一个转置变换。
+""" |> box(:yellow, :注意)
+
+# ╔═╡ a80a133b-88a0-4803-b5a7-e586440aca3c
+md"""
+###  计算案例
+下面还是以上述构造的特征计算kmeans聚类。 前面已经构造了特征矩阵X。 假定我们要将样本聚为2个类， 下面的代码可以实现这一目标：
 """
 
-# ╔═╡ 0449f1e4-e84a-4460-9753-363b8ba4e05a
+# ╔═╡ 8ecc280e-0342-4100-af46-9b0723f1dfc0
+c1 = kmeans(X, 2)
+
+# ╔═╡ a09c4b87-7dda-4d07-9b9f-4b3514335ffd
 md"""
-比如， 可以按照类别变量分组， 去画不同组的连续变量的密度图。这时候， 只需要设定分组变量即可（group）。下图按照不同的客户性质（好0，差1）, 去分析客户年龄的分布情况。从结果上来说， 两类客户在年龄的分布在形状上是近似的。
+#### 结果提取与分析
+上面kmeans的结果保存在变量c1中。有几个重要的结果是需要关注的。
+ - 中心(centers)
+ - 簇结果计数（counts）
+ - 样本分派的类别（assignments）
+
+这些结果可以通过 **聚类结果.名字**的方式获取相应的字段。 其中计数和分派还可以counts、assignments两个函数在聚类结果上调用实现。
 """
 
-# ╔═╡ 1e024870-e11b-41c0-87dd-2dffc52e7687
-@df ret plot(:AGE, st = density ,group = :RESPONSE)
-
-# ╔═╡ a7f2fd7f-219b-439d-9428-9d034b3cd341
+# ╔═╡ 2bf3e51a-6a5e-4d22-b024-7d2bb5d48336
 md"""
-类似的， 我们也可以做出两类客户在年龄分布上的直方图。 上面我们说两类客户在年龄的分布的形状上是相似的， 但在数量上， 明显红色的部分（:RESPONSE=1），也就是信用差的用户要占多数。
+下面的结果说明， 聚类为两个簇后， 第一簇有 $((counts(c1)[1])) 个样本， 第二簇有 $((counts(c1)[2])) 个样本。
 """
 
-# ╔═╡ a776ef1e-810d-4c2e-b788-138d0e83e447
-@df ret groupedhist(:AGE, group = (:RESPONSE),bar_position = :stack)
+# ╔═╡ e9fc11af-6da4-45d4-9679-cb963214edb6
+counts(c1)
 
-# ╔═╡ 4637c0ca-211f-4743-a5be-accf456110c7
+# ╔═╡ 1fc28df8-dbd8-44d4-9a82-7c95663c499c
 md"""
-也可以做出不同类别下， 连续变量的箱线图。从下图看， 虽然不同类别下， 年龄的分布是近似的。但总体而言， 信誉较差的用户整体年龄稍偏大（中间部分上移）。
-""" 
-
-# ╔═╡ e9cb3015-2d95-4fe1-8609-cb7e0bccfd05
-@df ret boxplot(string.(:RESPONSE), :AGE, legend = false)
-
-# ╔═╡ 7b3b774d-4d56-477f-8f04-24da2aa64de1
-md"""
-上面画图的x信息， 我们将其转化为字符串， `string.(:RESPONSE)`。如果不转化， 函数会将其视为连续变量（因为值是整数）。读取可以自己验证一下差异。
-""" |> box()
-
-# ╔═╡ b837c16d-efcb-40fa-aeb0-d80797332252
-md"""
-### 两个连续变量
-两个连续变量可以画散点图。散点图的序列类型是：scatter。 
+下面的向量表示每个样本被分派到哪一个簇中。
 """
 
-# ╔═╡ 90ed5b64-ece0-4f8a-8d8a-46524aba47c7
-@df ret plot(:AGE,:AMOUNT,  st = :scatter,xlabel = "AGE", ylabel = "AMOUNT", legend=false)
+# ╔═╡ 595f9993-abeb-41ac-86b7-3508b6228f3d
+assignments(c1)
 
-# ╔═╡ 19a24ccf-1499-42ec-98ab-eea784c75378
+# ╔═╡ 8dd22076-0400-4279-9eba-e75e829bcd58
 md"""
-这种散点图当然可以看到一些信息(两类索赔存在几个线性关系)， 不过，有时候， 我们也可能结合一个分类变量去分析。比如， 我们看不同欺诈类别下， 这个图形的样子。
+下面给出的是每个簇的中心， 因为我们只使用了4个特征， 所以每个簇的中心是4维的向量。
 """
 
-# ╔═╡ e05b06c3-f9c0-4422-ad52-38b7217fd809
+# ╔═╡ e2d34790-2576-49f6-b80e-b457a9aa44b9
+c1.centers
+
+# ╔═╡ 91c9e518-5f06-4435-b988-c268b991bc21
 md"""
-## 任务3：三个及以上变量可视化
-平面图形只有两个维度， 当有3个及以上的变量需要同时可视化的时候， 一个常见的做法是选择两个变量作图， 将其他变量映射到图形属性上。 下图展示的是年龄、金额、客户类别的散点图。其中，客户类别用于将样本分组。 分组之后， Plots会自动对不同的组用不同的颜色表示。 
+`assignments`函数可以返回所有样本被分配的簇的编号组成的向量。
 """
 
-# ╔═╡ eeeec20b-57e8-461a-8fc3-330ff48ae65e
-@df ret plot(:AGE,:AMOUNT,  st = :scatter, xlabel = "AGE", ylabel = "AMOUNT", group = :RESPONSE)
+# ╔═╡ 735ada31-d603-4380-b34c-9fa1575b9478
+assignments(c1)
 
-# ╔═╡ ed92b159-c293-438e-b046-332c3c14d809
-TableOfContents(title = "目录")
+# ╔═╡ d7deebc1-6e63-47e2-9572-bca890286a9c
+c1.assignments
+
+# ╔═╡ 0e0f504d-82f0-4051-b54b-301f170836fa
+md"""
+### 切换距离计算
+在kmeans函数中， 默认的距离函数是平方欧式距离（distance::SemiMetric=SqEuclidean()）。如果想采用不同的距离函数， 可以指定不同的距离类型实例。 比如， 我们用城市块距离重新做聚类， 看一下效果是否会不一样。
+"""
+
+# ╔═╡ b236174b-f099-490a-8922-bd0ff4b8f2b2
+c2 = kmeans(X, 2, distance = Cityblock(), display=:final)
+
+# ╔═╡ f026189c-3266-4e31-b308-936ff02caa37
+md"""
+读者可以自行对比两种不同的距离返回的结果的差异。
+"""
+
+# ╔═╡ c19ef3e8-d2ae-4ae1-8f6c-88b2254c2b24
+md"""
+## 任务4 层次聚类
+### 层次聚类函数
+层次聚类使用的函数是hclust。其签名如下：
+```
+hclust(d::AbstractMatrix; [linkage], [uplo], [branchorder]) -> Hclust
+```
+其中， 
+- d::AbstractMatrix: 是样本之间的距离矩阵， 其中d[i,j]表示第i个样本和第j个样本的距离。
+- linkage::Symbol: 表示簇之间的距离计算方式。 本质上是簇的样本之间的聚类如何变成簇的簇的距离。其可选项包括：
+	- :single (默认值): 簇的元素之间的最小距离当成是簇之间的聚类。
+	- :average: 簇元素之间的平均距离当成是簇的距离。
+	- :complete: 簇元素之间的最大距离当成是簇的距离。
+	- :ward: 合并簇之后， 样本到簇中心的平方距离的增加量
+
+由于层次聚类输入的是距离矩阵， 所以需要事先计算出距离矩阵来。更多的细节，可以参考[帮助文档](https://juliastats.org/Clustering.jl/stable/hclust.html)
+"""
+
+# ╔═╡ 9c9bf9ac-7767-4f1d-8575-9d6dc5d8b9f9
+md"""
+### 距离计算
+由于我们的数据中包含很多样本， 直接计算所有样本之间的距离很容易导致内存不足。为此， 我们随机抽取1000个样本用于演示层次聚类过程。 下面的id用于存储我们从X的列中无放回的抽取1000个样本的编号。
+
+"""
+
+# ╔═╡ 1b08b323-7a1a-4f5c-a6ce-37ce24d91591
+id = sample(1:size(X)[2], 1000, replace = false)
+
+# ╔═╡ ae38b3e4-df08-4ebb-b49a-c301aadc4c37
+md"""
+接下来， 计算相应的距离。由于我们要的是样本之间两两的距离，因此，选用`pairwise`函数。 同时，因为X中列存储的是样本， 因此指定距离计算的维度`dims=2`。
+"""
+
+# ╔═╡ e418ceb6-41ee-4697-826b-fee80670e735
+d = pairwise(Euclidean(), X[:, id], X[:, id],dims=2)
+
+# ╔═╡ 0e58ba7f-9d14-4e22-9ed1-bf9b280906c1
+md"""
+### 层次聚类计算
+"""
+
+# ╔═╡ 468a299c-99e6-47ba-baa9-046c49cc7aca
+h = hclust(d)
+
+# ╔═╡ a6e1cf72-167c-449f-b853-f3924e285363
+md"""
+层次聚类是将所有的样本最终聚成了一个类。 可以使用`plot`函数（来自StatsPlots包）画出层次聚类的过程。
+"""
+
+# ╔═╡ c86d1fe0-ded7-405b-993a-cb3d121811fe
+plot(h)
+
+# ╔═╡ 08df9aff-dee7-4c9e-b1f9-fa34f7ef0eb8
+md"""
+上面将所有的样本画在一起， 可能看不清做种结果长啥样， 我们可以少画一点。 如下为 我们将前50个样本做层次聚类的结果。
+"""
+
+# ╔═╡ 13e28462-a217-4bbe-a9c8-4a2e427d7025
+h1 = hclust(d[1:50, 1:50])
+
+# ╔═╡ 061ee529-f032-4c8f-8613-01e72c5d6e69
+plot(h1)
+
+# ╔═╡ 75c784bb-3683-4a56-8c9c-bdd9be54ac61
+md"""
+为了实现按照不同的距离将其划分为不同的类， 需要使用`cutree`函数。 下面的代码是将样本划分为两个簇。不过请注意， 这里实现的是将随机挑选出的样本做的划分结果。
+"""
+
+# ╔═╡ 40286c18-78f1-4c2a-ba71-e95f62e0129d
+cutree(h, k=2)
+
+# ╔═╡ a738d4d5-f360-4f8b-96ca-b0a58e867dde
+PlutoUI.TableOfContents(title = "目录", aside = true)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Box = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataFramesMeta = "1313f7d8-7da2-5740-9ea0-a2ca25f37964"
-FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
@@ -417,10 +547,10 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 [compat]
 Box = "~1.0.1"
 CSV = "~0.10.14"
-CategoricalArrays = "~0.10.8"
+Clustering = "~0.15.7"
 DataFrames = "~1.6.1"
 DataFramesMeta = "~0.15.2"
-FreqTables = "~0.4.6"
+Distances = "~0.10.11"
 PlutoUI = "~0.7.58"
 StatsBase = "~0.34.3"
 StatsPlots = "~0.15.7"
@@ -432,7 +562,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "7f91ea425e723dd8a84b0f2cf5141f3a9ae8561d"
+project_hash = "5eb19602182e15f7af56f89fe3e07deb96d3515e"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -524,24 +654,6 @@ git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
 
-[[deps.CategoricalArrays]]
-deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
-git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
-uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
-version = "0.10.8"
-
-    [deps.CategoricalArrays.extensions]
-    CategoricalArraysJSONExt = "JSON"
-    CategoricalArraysRecipesBaseExt = "RecipesBase"
-    CategoricalArraysSentinelArraysExt = "SentinelArrays"
-    CategoricalArraysStructTypesExt = "StructTypes"
-
-    [deps.CategoricalArrays.weakdeps]
-    JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-    SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-    StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
-
 [[deps.Chain]]
 git-tree-sha1 = "9ae9be75ad8ad9d26395bf625dea9beac6d519f1"
 uuid = "8be319e6-bccf-4806-a6f7-6fae938471bc"
@@ -596,11 +708,6 @@ deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
 git-tree-sha1 = "fc08e5930ee9a4e03f84bfb5211cb54e7769758a"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.10"
-
-[[deps.Combinatorics]]
-git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
-uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
-version = "1.0.2"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
@@ -804,12 +911,6 @@ deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
 git-tree-sha1 = "d8db6a5a2fe1381c1ea4ef2cab7c69c2de7f9ea0"
 uuid = "d7e528f0-a631-5988-bf34-fe36492bcfd7"
 version = "2.13.1+0"
-
-[[deps.FreqTables]]
-deps = ["CategoricalArrays", "Missings", "NamedArrays", "Tables"]
-git-tree-sha1 = "4693424929b4ec7ad703d68912a6ad6eff103cfe"
-uuid = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
-version = "0.4.6"
 
 [[deps.FriBidi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1181,12 +1282,6 @@ deps = ["OpenLibm_jll"]
 git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.2"
-
-[[deps.NamedArrays]]
-deps = ["Combinatorics", "DataStructures", "DelimitedFiles", "InvertedIndices", "LinearAlgebra", "Random", "Requires", "SparseArrays", "Statistics"]
-git-tree-sha1 = "0ae91efac93c3859f5c812a24c9468bb9e50b028"
-uuid = "86f7a689-2022-50b4-a561-43c23ac3c673"
-version = "0.10.1"
 
 [[deps.NearestNeighbors]]
 deps = ["Distances", "StaticArrays"]
@@ -1969,65 +2064,72 @@ version = "1.4.1+1"
 """
 
 # ╔═╡ Cell order:
-# ╟─e63c824a-e36b-409b-bdf1-ceb59ba2254c
-# ╟─bc67e7cf-151a-49da-bf53-e4dbfedec877
-# ╟─c0f6c9d9-5bc7-4b1d-bae8-da6718546501
-# ╠═e39c88ab-fb14-45ac-9d17-5ecdd0fbe00d
-# ╟─07ec0b05-fc38-4d39-aa64-426d04953114
-# ╟─4b01f41f-f84f-4357-aa74-7df34c94c56b
-# ╟─8e5a91a2-2543-4b42-b093-bd0cd8c865d9
-# ╠═4feb5c13-e751-40e1-aa99-f855f95c6958
-# ╟─2d448051-2962-4960-8b8c-29b14fb19930
-# ╟─ee6d388d-8f88-4262-ac57-e8429dd28d73
-# ╠═99a8245c-4e8e-47cd-b5ce-3bd65368e4ee
-# ╟─0181490a-0930-4153-8260-b82f9c3d0ab1
-# ╠═e5014c07-1550-4299-9f6e-632df6779789
-# ╟─70aab8fe-5245-445c-a356-15f15fc07909
-# ╟─b911d17e-7a3a-4bd9-be2a-547ac3e20ee6
-# ╟─bb2ac23c-e9c7-487c-a10c-e38747444ea2
-# ╠═d79fea58-f625-4e10-8c1a-9c6daf758692
-# ╟─4cfbf68e-43a9-428e-9936-f2fa65130d5c
-# ╟─b8a0a94a-d1f7-4ac1-9380-088168e5e04a
-# ╠═5118a9c6-15ab-4190-9be1-8bf50fbcda4a
-# ╟─1e80bcdc-ed2c-419c-a2f1-a43e1f6405f9
-# ╠═82fab222-290f-441f-a251-aebba0a39354
-# ╟─a7424d22-3557-44a9-8051-0c292106387d
-# ╟─9af2bd7e-39a5-4654-b764-5a37bbab3c05
-# ╠═200b8b9a-7fb4-4a14-83f0-a47d72863f25
-# ╠═b693d610-5ad5-49b3-b333-9d658ae229af
-# ╟─c242eac5-14c3-48c4-a28e-f0c4ad494fb8
-# ╟─1103886c-b91d-43fc-a63d-1c3e60e84e57
-# ╠═dc038072-d2ea-45cb-951b-ad346ad0f118
-# ╟─082fd91d-97dc-4674-b8b0-385e908db0a0
-# ╠═eba9d72d-a028-437e-bbe0-8f81392f6bb9
-# ╟─6c03c3db-e486-4723-bf8b-b2399f8cbd79
-# ╠═4afa61e5-c697-4d96-8533-96148d647339
-# ╟─c22912f8-d5c2-4909-ad92-e129f0b316bc
-# ╟─4abdbb34-7861-487f-9dce-446240e37c3a
-# ╠═37afab46-9099-4b15-b946-5e0e637fe2ba
-# ╟─17a34244-8342-4f02-bbf9-9e6ae6387b3c
-# ╟─46c33a45-0f9d-43fa-90ac-bb00bae83a01
-# ╠═297cbadb-36f5-46d4-8c58-961f5d947402
-# ╟─ed24f4d0-8dcd-4433-8e28-4a43c232ee21
-# ╠═4854489a-0b1f-44f5-968b-30d0cb106254
-# ╠═bea8a9ba-d203-4ccc-b026-8bdc6217b7cc
-# ╟─e8346c20-77f9-4db9-a993-57662f02df04
-# ╠═a0ccada3-340c-435b-9c7c-240f64e10361
-# ╟─00bea507-843d-4547-9971-807a43852d45
-# ╟─cdcb5b84-2c3a-4fdf-955f-7fa91a802c7e
-# ╟─0449f1e4-e84a-4460-9753-363b8ba4e05a
-# ╠═1e024870-e11b-41c0-87dd-2dffc52e7687
-# ╟─a7f2fd7f-219b-439d-9428-9d034b3cd341
-# ╠═a776ef1e-810d-4c2e-b788-138d0e83e447
-# ╟─4637c0ca-211f-4743-a5be-accf456110c7
-# ╠═e9cb3015-2d95-4fe1-8609-cb7e0bccfd05
-# ╟─7b3b774d-4d56-477f-8f04-24da2aa64de1
-# ╟─b837c16d-efcb-40fa-aeb0-d80797332252
-# ╠═90ed5b64-ece0-4f8a-8d8a-46524aba47c7
-# ╟─19a24ccf-1499-42ec-98ab-eea784c75378
-# ╟─e05b06c3-f9c0-4422-ad52-38b7217fd809
-# ╠═eeeec20b-57e8-461a-8fc3-330ff48ae65e
-# ╟─ed92b159-c293-438e-b046-332c3c14d809
-# ╟─01f33d8e-2d18-4ee7-8b77-d5bd10b71fe4
+# ╟─70ec76d1-638c-4bb9-80ab-69bb33450baf
+# ╟─e4e623dc-0717-421a-9d38-111833ab5711
+# ╟─bf7e4c5a-4f7f-4a99-a6b0-6a225b5a43a3
+# ╟─139f007f-31be-4ae6-9d67-c6917ea01f3d
+# ╠═3f847b82-2175-498a-9ef7-f85a50432733
+# ╟─864ee807-e20c-4fa6-bafc-22b629a9caf4
+# ╠═ea3e25cd-0744-4c03-b1c3-57031a98ba4f
+# ╟─52275bf8-330a-46c5-b6d8-4137ce1031d8
+# ╠═2d63e2c5-44e9-4d54-b199-f3a3c8013048
+# ╠═62957610-c7f8-4e43-9ce3-a5372432ecb1
+# ╟─7d874820-7e3f-11ec-1087-dd819d253f23
+# ╟─41eb25f8-8a10-4f78-9373-dd79f95c87f2
+# ╟─3012af0f-f52d-4212-a5a7-c8f97485ea5c
+# ╟─1bd83605-0cbe-4908-8044-15ee8470c321
+# ╟─319acc7d-b5ac-421a-b3ea-98d6cd3701de
+# ╟─d79fd59e-ef0b-4b12-b4cf-6526020b8167
+# ╟─be29c6d4-8d37-439b-9111-9adcbda40582
+# ╠═deb39e3e-139a-4d1f-8b56-4fb888060018
+# ╠═130bc63c-90ad-4076-bf55-e16f92ee6520
+# ╟─a57b8a91-44d9-48ce-be6a-005b645f57a5
+# ╠═9e354aa0-5092-4fda-8919-84b9c6618e00
+# ╟─b760559b-2335-4c23-99a1-82747d64914c
+# ╠═4cfe738b-1995-4233-8546-471e7195b03b
+# ╠═5f6f8819-8793-47bc-8037-872a6900ece0
+# ╟─88093475-0f2b-4120-9748-36f73ddc0b24
+# ╠═3e11f98b-373a-4186-a71b-54a042735f2a
+# ╟─bf19eb1c-5bc5-4c53-8561-3920cf788327
+# ╠═bb5090de-0443-4a79-8dda-5a09a43c6eba
+# ╠═1be189bf-4a2f-4fcd-bb94-4a3297fb1e51
+# ╟─84735154-7ff5-4bb1-8d22-a4226e4c448b
+# ╠═e6199349-13bf-4efe-af3c-01c6dccab74c
+# ╟─6208466b-d86d-4b0b-99b5-bfa2baabb3b9
+# ╠═a10f2c4b-89ec-4175-a3a4-5ba273520f40
+# ╟─3bf510ec-f3c9-4b3d-bac1-19a9ea386a54
+# ╟─8e085543-c0f3-45b8-9c09-de76e9069be2
+# ╟─b9034943-31f9-49ab-8ae4-30f76cad2c43
+# ╟─a80a133b-88a0-4803-b5a7-e586440aca3c
+# ╠═8ecc280e-0342-4100-af46-9b0723f1dfc0
+# ╟─a09c4b87-7dda-4d07-9b9f-4b3514335ffd
+# ╟─2bf3e51a-6a5e-4d22-b024-7d2bb5d48336
+# ╠═e9fc11af-6da4-45d4-9679-cb963214edb6
+# ╟─1fc28df8-dbd8-44d4-9a82-7c95663c499c
+# ╠═595f9993-abeb-41ac-86b7-3508b6228f3d
+# ╟─8dd22076-0400-4279-9eba-e75e829bcd58
+# ╠═e2d34790-2576-49f6-b80e-b457a9aa44b9
+# ╟─91c9e518-5f06-4435-b988-c268b991bc21
+# ╠═735ada31-d603-4380-b34c-9fa1575b9478
+# ╠═d7deebc1-6e63-47e2-9572-bca890286a9c
+# ╟─0e0f504d-82f0-4051-b54b-301f170836fa
+# ╠═b236174b-f099-490a-8922-bd0ff4b8f2b2
+# ╟─f026189c-3266-4e31-b308-936ff02caa37
+# ╟─c19ef3e8-d2ae-4ae1-8f6c-88b2254c2b24
+# ╟─9c9bf9ac-7767-4f1d-8575-9d6dc5d8b9f9
+# ╟─1b08b323-7a1a-4f5c-a6ce-37ce24d91591
+# ╟─ae38b3e4-df08-4ebb-b49a-c301aadc4c37
+# ╠═e418ceb6-41ee-4697-826b-fee80670e735
+# ╟─0e58ba7f-9d14-4e22-9ed1-bf9b280906c1
+# ╠═468a299c-99e6-47ba-baa9-046c49cc7aca
+# ╟─a6e1cf72-167c-449f-b853-f3924e285363
+# ╠═c86d1fe0-ded7-405b-993a-cb3d121811fe
+# ╟─08df9aff-dee7-4c9e-b1f9-fa34f7ef0eb8
+# ╠═13e28462-a217-4bbe-a9c8-4a2e427d7025
+# ╠═061ee529-f032-4c8f-8613-01e72c5d6e69
+# ╟─75c784bb-3683-4a56-8c9c-bdd9be54ac61
+# ╠═40286c18-78f1-4c2a-ba71-e95f62e0129d
+# ╟─a738d4d5-f360-4f8b-96ca-b0a58e867dde
+# ╟─c9ff268b-0c31-4cea-b690-cb55ad8b24fa
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
