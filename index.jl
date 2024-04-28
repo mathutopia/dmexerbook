@@ -20,46 +20,65 @@ md"""
 这是一个简单的基于Julia的数据挖掘实验教程
 """
 
-# ╔═╡ 52e62656-9402-45b9-9c35-7e870b044e49
-rootpath = "https://mathutopia.github.io/dmexerbook/" ;
+# ╔═╡ bd3bbadd-8f66-4f1a-81a4-adfbec73f144
+v = [(1, "c"), (3, "a"), (2, "b")]; 
 
-# ╔═╡ 54c07a7c-3dd9-4379-b85a-92df29846144
-function maketoc()
-	fs = readdir(".")
-	jlfl = [ (name=nm[1:end-3] , url = rootpath*nm[1:end-3]) for nm in fs if 		(endswith( nm, ".jl") && nm != "index.jl")]
+# ╔═╡ 4cb8890c-a31f-41a8-83bd-ded0d01f13a8
+sort!(v, by = x -> x[1])
 
-	render_row(file) = @htl("""
+# ╔═╡ bb4b9864-7e2a-4d65-bf2a-c3c0152d58af
+sort!(v, by = x -> x[1 ])
+
+# ╔═╡ 7c65e8ff-f6a0-4bc3-99e4-bbfa984135db
+function maketoc1(git="https://mathutopia.github.io")
+	toc = read("toc.txt",String)
+	toc = unique(split(strip(toc,'\n'), "\n"))
+	pkgn = split(dirname(@__FILE__),"\\")[end]
+	toc = [split(t,',') for t in toc]
+	sort!(toc, by = x->x[1])
+	@show toc
 	
-      <li> <a href=$(file.url)> $(file.name) </a> </li>
+	render_url(c) = join([git, pkgn, c[1], c[4] ],"/")
+
+	render_row(c) = @htl("""
+	
+      <li> <a href=$(render_url(c))> $(c[1]) - $(c[3]) </a> </li>
     """)
 
     render_table(list) = @htl("""
-      <div id="toc">
-    <!-- 目录代码 -->
-	<div style="text-align:center;"> <h3> 目录 <h3></div>
-	
-    <ul>
-      $((render_row(b) for b in list))
-	 </ul>
-  </div>""")
-
-	render_table(jlfl)
+    <div id="toc">
+        <!-- 目录代码 -->
+        <div style="text-align:center;"> <h3> 目录 <h3></div> 
+        <ul>
+        $((render_row(b) for b in list))
+        </ul>
+    </div>
+    <style>
+        #toc {
+		  font-family: Arial, sans-serif;
+		  background-color: #ccf;
+		  padding: 10px;
+		}
+	</style>
+  """)
+	render_table(toc)
 end
 
 # ╔═╡ 70071301-a573-49fe-af8a-07b9fb05f41f
-maketoc()
+maketoc1()
 
-# ╔═╡ e53e8558-b018-4f2f-a3b4-4df62952912a
-html"""
-<style>
+# ╔═╡ 475a1361-9744-48f5-bac3-ca7c84ad3726
+function toc1(git="https://mathutopia.github.io")
+	toc = read("toc.txt",String)
+	toc = unique(split(strip(toc,'\n'), "\n"))
+	pkgn = split(dirname(@__FILE__),"\\")[end]
+	toc = [split(t,',') for t in toc]
+	sort!(toc, by = x->x[1])
+	
+end
 
-#toc {
-  font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
-  padding: 10px;
-}
-</style>
-"""
+# ╔═╡ 48575594-56d9-42f4-83ef-03d31eedf7f4
+toc1()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -110,9 +129,12 @@ version = "0.1.8"
 # ╠═5e5b8716-480a-4570-9991-8573b244c78a
 # ╟─1aa0a37f-69a9-40cd-acfd-c7f7b522d072
 # ╟─b479ffc8-f9bc-45b4-a105-70234cc39ff6
-# ╟─52e62656-9402-45b9-9c35-7e870b044e49
-# ╠═54c07a7c-3dd9-4379-b85a-92df29846144
 # ╠═70071301-a573-49fe-af8a-07b9fb05f41f
-# ╟─e53e8558-b018-4f2f-a3b4-4df62952912a
+# ╠═bd3bbadd-8f66-4f1a-81a4-adfbec73f144
+# ╠═4cb8890c-a31f-41a8-83bd-ded0d01f13a8
+# ╠═bb4b9864-7e2a-4d65-bf2a-c3c0152d58af
+# ╠═7c65e8ff-f6a0-4bc3-99e4-bbfa984135db
+# ╠═475a1361-9744-48f5-bac3-ca7c84ad3726
+# ╠═48575594-56d9-42f4-83ef-03d31eedf7f4
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
