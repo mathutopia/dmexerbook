@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.41
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -22,24 +22,29 @@ using Box
 # ╔═╡ 552abfd5-a12c-46a4-8754-bf6c38e465bf
 PlutoUI.TableOfContents(title = "目录", depth = 3, aside = true)
 
-# ╔═╡ 24df3614-219e-4eb3-9a16-7419000c9abe
-md"""
-实验七 关联规则挖掘
-""" |> shiyan
+# ╔═╡ 43f9a5aa-1649-4c82-ab8a-605e1da8b61a
+html"""
+<p style="font-size: 50px; text-align: center;">实验七 关联规则挖掘 </p>
+"""
 
 # ╔═╡ 00488270-759d-11ec-12fe-cb07b9231320
 md"""
-# 关联规则
-**学习目标**
-1. 理解关联规则的相关概念和挖掘算法的基本思想。
-2. 会利用工具包相关数据进行关联规则挖掘。
-3. 能对不同领域的问题， 通过恰当的方式， 将其转换为关联规则挖掘的问题， 并通过编码实现挖掘。
+!!! green ""
+	# 实验目的
+	1. 理解关联规则的相关概念和挖掘算法的基本思想。
+	2. 会利用工具包相关数据进行关联规则挖掘。
+	3. 能对不同领域的问题， 通过恰当的方式， 将其转换为关联规则挖掘的问题， 并通过编码实现挖掘。
 
-""" |> box()
+"""
+
+# ╔═╡ 075edf0d-3b6a-4bba-986f-71687365b0b9
+md"""
+# 实验过程
+"""
 
 # ╔═╡ 356c9ecf-648b-488a-a9dd-69d2a7ced9f3
 md"""
-# 任务1： 数据准备
+## 任务1： 数据准备
 本实验使用移动业务数据集， 通过关联规则挖掘用户移动业务订购之间的关系。 该数据集包含19个经过处理的字段，各字段的具体含义如下表所示。 
 
 """
@@ -112,12 +117,12 @@ md"""
 
 # ╔═╡ bab54374-5dbf-4a79-bb17-a04f788b9454
 md"""
-# 任务2：运用apriori算法
+## 任务2：运用apriori算法
 """
 
 # ╔═╡ f4bee84d-a0f2-4642-aedf-b6d365aa055b
 md"""
-## 频繁项集发现
+### 频繁项集发现
 """
 
 # ╔═╡ 80ec4ff9-5337-4631-b40b-ff6a2c6dbedf
@@ -152,7 +157,7 @@ md"""
 
 # ╔═╡ 80f0356c-b2f4-46ab-858a-31338149cd0b
 md"""
-## 产生关联规则
+### 产生关联规则
 接下来， 使用apriori算法挖掘关联规则。`apriori`函数的签名如下：
 ```
 apriori(transactions; supp = 0.01, conf = 0.8, maxlen = 5)
@@ -210,7 +215,7 @@ PlutoUI = "~0.7.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "558a27d38f313b85ee0348e93396bcb52fc636c5"
 
@@ -231,10 +236,10 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.Box]]
-deps = ["Markdown"]
-git-tree-sha1 = "d1bb190a6c0f8eec339173350c77d7d87ab900c8"
+deps = ["HypertextLiteral", "Markdown"]
+git-tree-sha1 = "c43838e1b85ae396b37551d2b48f71efdb1d4bbe"
 uuid = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
-version = "1.0.1"
+version = "1.0.15"
 
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
@@ -263,7 +268,7 @@ version = "3.47.0"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -324,6 +329,12 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 [[deps.Future]]
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
 
 [[deps.InlineStrings]]
 deps = ["Parsers"]
@@ -501,9 +512,9 @@ version = "0.7.0"
 
 [[deps.SentinelArrays]]
 deps = ["Dates", "Random"]
-git-tree-sha1 = "0e7508ff27ba32f26cd459474ca2ede1bc10991f"
+git-tree-sha1 = "90b4f68892337554d31cdcdbe19e48989f26c7e6"
 uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.4.1"
+version = "1.4.3"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -587,13 +598,18 @@ deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.TranscodingStreams]]
-git-tree-sha1 = "71509f04d045ec714c4748c785a59045c3736349"
+git-tree-sha1 = "5d54d076465da49d6746c647022f3b3674e64156"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.10.7"
+version = "0.10.8"
 weakdeps = ["Random", "Test"]
 
     [deps.TranscodingStreams.extensions]
     TestExt = ["Test", "Random"]
+
+[[deps.Tricks]]
+git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.8"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -636,9 +652,10 @@ version = "17.4.0+2"
 
 # ╔═╡ Cell order:
 # ╠═552abfd5-a12c-46a4-8754-bf6c38e465bf
-# ╟─24df3614-219e-4eb3-9a16-7419000c9abe
+# ╟─43f9a5aa-1649-4c82-ab8a-605e1da8b61a
 # ╟─00488270-759d-11ec-12fe-cb07b9231320
 # ╠═349bbd34-b34e-46c3-8c47-8bb415d497c8
+# ╟─075edf0d-3b6a-4bba-986f-71687365b0b9
 # ╟─356c9ecf-648b-488a-a9dd-69d2a7ced9f3
 # ╟─735979ca-1278-4bc5-8917-3ff0d4fd738c
 # ╟─412f7a9d-4731-4a69-a942-74fe0de10d6a

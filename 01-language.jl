@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.41
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -29,18 +29,19 @@ end
 =#
 using Box
 
-# ╔═╡ 5a64e73d-d7b8-4fa3-b81a-3154ae5a122b
-md"""
-实验1 Julia安装与入门
-""" |> shiyan
+# ╔═╡ 8dc01546-4df3-44cd-86d8-e888426b3fbf
+html"""
+<p style="font-size: 50px; text-align: center;">实验一 Julia安装与入门 </p>
+"""
 
-# ╔═╡ dc1a4db7-a9fd-49dd-b135-10c7099463b6
+# ╔═╡ 576ff65f-4a20-4a47-9620-0d86fc497bd2
 md"""
- # 目的与要求
-1. 掌握Julia软件的安装与基本使用
-2. 掌握Pluto的安装与使用
-3. 掌握Julia语言的基础语法
-""" |> box()
+!!! green ""
+	# 实验目的
+	1. 掌握Julia软件的安装与基本使用
+	2. 掌握Pluto的安装与使用
+	3. 掌握Julia语言的基础语法
+"""
 
 # ╔═╡ cfb64224-5ef7-4300-a6e0-f38ad8e68cac
 md"""
@@ -87,7 +88,7 @@ Pluto.run()
 # ╔═╡ aaafcdbe-a5e4-44da-bb6b-6a2d08c61602
 md"""
 ## Pluto的使用
-由于Pluto是本教程的关键计算环境， 下面的视频简要介绍了一下Pluto的使用。 更多使用的方法， 可以参考Pluto提供的官方notebook。
+启动Pluto之后 ， 其主页上有很多使用Pluto的案例， 选择其中Getting started部分的notebook浏览尝试一遍即可。
 """
 
 
@@ -255,16 +256,17 @@ a, b = 9, 4
 
 # ╔═╡ 7019a3b5-f0cb-40fa-8e66-51055af971e8
 md"""
-每一个算术运算都可以跟赋值符号=结合在一起形成一个更新运算。 比如：
-```julia
-a += b
-```
-表示：
-```julia
-a = a + b
-```
-一般而言， 一个更新运算表示把左操作数与右操作数做相应运算的结果再赋值给左操作数。
-""" |> box(:green, :注意)
+!!! green "注意"
+	每一个算术运算都可以跟赋值符号=结合在一起形成一个更新运算。 比如：
+	```julia
+	a += b
+	```
+	表示：
+	```julia
+	a = a + b
+	```
+	一般而言， 一个更新运算表示把左操作数与右操作数做相应运算的结果再赋值给左操作数。
+""" 
 
 # ╔═╡ 4e544be5-4a04-4182-a58e-13bdcd6c517e
 md"""
@@ -460,12 +462,13 @@ student1.name
 # ╔═╡ 7be99f73-40bf-4717-b64b-b4b0e850c364
 student1[2]
 
-# ╔═╡ 4ba402a6-2fbe-493d-8de8-266eace85a35
+# ╔═╡ 17dd2c84-cec3-4396-aee6-2fd2f53e6b6f
 md"""
-在构建命名元组时， 经常在括号的前面加上一个分号；， 这是为了避免元组只有一个元素时产生错误。没有分号， 一个元素放进括号还是这个元素， 并不会变成元组。
-
-构建元组时， 最后一个元素后面加一个逗号，不会影响最终的结果。但如果整个元组只有一个元素， 这个逗号就必须要添加了。
-""" |> box(:red, :注意)
+!!! danger "注意"
+	在构建命名元组时， 经常在括号的前面加上一个分号；， 这是为了避免元组只有一个元素时产生错误。没有分号， 一个元素放进括号还是这个元素， 并不会变成元组。
+	
+	构建元组时， 最后一个元素后面加一个逗号，不会影响最终的结果。但如果整个元组只有一个元素， 这个逗号就必须要添加了。
+"""
 
 # ╔═╡ 17e4686d-f9a0-4201-baec-4cc1730b1821
 (; xt=3)
@@ -918,19 +921,20 @@ range(1,10, length=2 )
 
 # ╔═╡ c18f82cb-f7b3-4f03-b387-b17745e11597
 md"""
-**函数调用：**上面给出的range函数有四种调用方式，我们应该怎么去调用呢？或者Julia是怎么实现一个名字（range）可以实现多种不同功能的呢？
-
-在编程语言中， 一个名字（函数）在不同语境中可以表示不同含义（不同的调用方式，实现不同的功能），被称为多态。在C++、Python等语言中， 是通过对象实现多态的，即不同的对象调用相同的函数可能得到不同的结果。
-
-在Julia中， 通过**多重分派**实现多态。一个函数名只是给出了一个通用的功能(generic function)。然后对这个功能的不同实现表示该函数的方法（method）。上面就给出的range函数的四个方法。
-
-Julia是怎么根据用户输入的参数去判断要调用哪个方法的呢？答案隐藏在Julia的多重分派（multiple dispatch）里。简单来说， 多重分派的意思是：一个函数在寻找匹配的方法时， 根据其多个参数的类型去确定要调用的方法。当然， 并非所有的参数都会用于多重分派。只有参数列表里，分号；前面的参数（称为**位置参数**）会起作用（也就是给出的位置参数类型及顺序不同， 调用的方法就不同）。这些参数在调用的时候， 不需要给出参数名， 直接按顺序给出参数值即可。分号后的参数通常被称为**关键字参数**， 关键字参数在赋值时， 需要给出关键字的名字。在函数调用时， 位置参数和关键字参数不需要用分号隔开。 所以， 你知道下面的代码的含义吗？
-```julia
-range(1,10, 2)
-range(1,10, length=2 )
-range(1,10, step=2 )
-```
-""" |> box(:green, :扩展)
+!!! green "扩展"
+	**函数调用：**上面给出的range函数有四种调用方式，我们应该怎么去调用呢？或者Julia是怎么实现一个名字（range）可以实现多种不同功能的呢？
+	
+	在编程语言中， 一个名字（函数）在不同语境中可以表示不同含义（不同的调用方式，实现不同的功能），被称为多态。在C++、Python等语言中， 是通过对象实现多态的，即不同的对象调用相同的函数可能得到不同的结果。
+	
+	在Julia中， 通过**多重分派**实现多态。一个函数名只是给出了一个通用的功能(generic function)。然后对这个功能的不同实现表示该函数的方法（method）。上面就给出的range函数的四个方法。
+	
+	Julia是怎么根据用户输入的参数去判断要调用哪个方法的呢？答案隐藏在Julia的多重分派（multiple dispatch）里。简单来说， 多重分派的意思是：一个函数在寻找匹配的方法时， 根据其多个参数的类型去确定要调用的方法。当然， 并非所有的参数都会用于多重分派。只有参数列表里，分号；前面的参数（称为**位置参数**）会起作用（也就是给出的位置参数类型及顺序不同， 调用的方法就不同）。这些参数在调用的时候， 不需要给出参数名， 直接按顺序给出参数值即可。分号后的参数通常被称为**关键字参数**， 关键字参数在赋值时， 需要给出关键字的名字。在函数调用时， 位置参数和关键字参数不需要用分号隔开。 所以， 你知道下面的代码的含义吗？
+	```julia
+	range(1,10, 2)
+	range(1,10, length=2 )
+	range(1,10, step=2 )
+	```
+"""
 
 # ╔═╡ 5560ec19-78a4-4c1d-accd-9c07c29c0e18
 md"""
@@ -1030,8 +1034,9 @@ end
 
 # ╔═╡ a82faf94-ebc6-4f64-9110-cfae5d478c40
 md"""
-不像C等语言，在Julia中， 要求条件求值的结果必须是bool值， 即true或者false。如果不是， 则程序会错误。（在C语言中， 不是0都当成是true）
-""" |> box(:red, :注意)
+!!! danger "注意"
+	不像C等语言，在Julia中， 要求条件求值的结果必须是bool值， 即true或者false。如果不是， 则程序会错误。（在C语言中， 不是0都当成是true）
+"""
 
 # ╔═╡ 42a8ee30-8f6a-4805-a196-1f50bd1be76e
 md"""
@@ -1321,8 +1326,9 @@ printargs(tx...)
 
 # ╔═╡ ce26d829-a7de-4194-96ef-9a81732db012
 md"""
-在Julia中， 有一个关于函数的习惯，**如果一个函数会修改其输入参数，该函数名要以！结尾**。 反过来， 如果发现一个带惊叹号的函数， 那么要知道这个函数会修改输入参数。
-""" |> box(:red, :注意)
+!!! danger "注意"
+	在Julia中， 有一个关于函数的习惯，**如果一个函数会修改其输入参数，该函数名要以！结尾**。 反过来， 如果发现一个带惊叹号的函数， 那么要知道这个函数会修改输入参数。
+""" 
 
 # ╔═╡ 355c0db5-ddfc-4af2-8902-1bcf0cacfb97
 struct Point2D
@@ -1355,14 +1361,15 @@ end
 
 # ╔═╡ 66d2514c-7deb-4f93-bc19-318812a9da2d
 md"""
-用struct直接定义的类型在实例化之后默认是不可修改的。如果要定义可修改的类型。 需要在struct关键字前加mutable：
-```
-mutable struct Typename
-field1
-field2
-...
-end
-""" |> box(:gree, :注意)
+!!! info "注意"
+	用struct直接定义的类型在实例化之后默认是不可修改的。如果要定义可修改的类型。 需要在struct关键字前加mutable：
+	```
+	mutable struct Typename
+	field1
+	field2
+	...
+	end
+"""
 
 # ╔═╡ 0042e8a0-61be-4768-ae31-0445d531e5ff
 md"""
@@ -1387,15 +1394,15 @@ PlutoUI = "~0.7.58"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "2fbeba00feefb74233581601016e9bf342363021"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
-git-tree-sha1 = "297b6b41b66ac7cbbebb4a740844310db9fd7b8c"
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
 uuid = "6e696c72-6542-2067-7265-42206c756150"
-version = "1.3.1"
+version = "1.3.2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -1408,10 +1415,10 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.Box]]
-deps = ["Markdown"]
-git-tree-sha1 = "d1bb190a6c0f8eec339173350c77d7d87ab900c8"
+deps = ["HypertextLiteral", "Markdown"]
+git-tree-sha1 = "c43838e1b85ae396b37551d2b48f71efdb1d4bbe"
 uuid = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
-version = "1.0.1"
+version = "1.0.15"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -1422,7 +1429,7 @@ version = "0.11.5"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -1438,9 +1445,9 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
-git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
+git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.4"
+version = "0.8.5"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -1547,9 +1554,9 @@ version = "1.10.0"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "71a22244e352aa8c5f0f2adde4150f62368a3f2e"
+git-tree-sha1 = "ab55ee1510ad2af0ff674dbcced5e94921f867a9"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.58"
+version = "0.7.59"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1658,8 +1665,8 @@ version = "17.4.0+2"
 """
 
 # ╔═╡ Cell order:
-# ╟─5a64e73d-d7b8-4fa3-b81a-3154ae5a122b
-# ╟─dc1a4db7-a9fd-49dd-b135-10c7099463b6
+# ╟─8dc01546-4df3-44cd-86d8-e888426b3fbf
+# ╟─576ff65f-4a20-4a47-9620-0d86fc497bd2
 # ╟─cfb64224-5ef7-4300-a6e0-f38ad8e68cac
 # ╟─ec6b4326-88a1-4375-a828-3e28ca7b2063
 # ╟─02124a75-a225-4b7d-9b11-f22c5022a9a5
@@ -1688,7 +1695,7 @@ version = "17.4.0+2"
 # ╠═f12ade36-ff61-435b-9a76-e9f739fe79ce
 # ╟─d5b8e5de-f040-408c-92ac-aed3c3dffe51
 # ╠═3540f431-7b50-4ed1-9d66-3cb4568856a2
-# ╠═27e2d30c-96bb-4a28-ba47-6ea7d9bb3b2d
+# ╟─27e2d30c-96bb-4a28-ba47-6ea7d9bb3b2d
 # ╠═88e526c6-cd09-4a75-9bc0-cec5a7a80234
 # ╠═a89c40a4-4d12-4fc5-8cb9-75a8e2c9f708
 # ╠═ff6530fa-8b79-4321-bde4-d42f3de138c5
@@ -1712,7 +1719,7 @@ version = "17.4.0+2"
 # ╟─a1d25013-d982-438b-a9be-cb8f2a651a8a
 # ╠═e442bb4c-4470-4415-9247-caffda420bf5
 # ╠═7be99f73-40bf-4717-b64b-b4b0e850c364
-# ╟─4ba402a6-2fbe-493d-8de8-266eace85a35
+# ╟─17dd2c84-cec3-4396-aee6-2fd2f53e6b6f
 # ╠═17e4686d-f9a0-4201-baec-4cc1730b1821
 # ╠═7d20bf88-7f1f-4159-88b3-c40d2e671781
 # ╠═9fa94e04-fdbb-4f05-af6b-9330b3f52ec4

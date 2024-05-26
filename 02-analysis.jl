@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.41
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -19,14 +19,14 @@ end
 =#
 using Box
 
-# ╔═╡ 6dc4358c-bbf7-41e5-a54a-0b04efcafd7b
-md"""
-实验二：数据分析基础 
-""" |> shiyan
+# ╔═╡ a922d17b-3d81-4a0b-993f-786f2fc922f0
+html"""
+<p style="font-size: 50px; text-align: center;">实验二 数据分析基础  </p>
+"""
 
 # ╔═╡ dac9f5fd-b531-41cc-bf24-de036de2631d
 md"""
-# **实验目的：**
+# 实验目的
 1. 掌握常见格式的数据的读写（比如CSV，EXCEL）
 2. 了解不同数据类型的表示形式（DataFrame）
 3. 掌握不同数据类型的统计计算方法
@@ -36,7 +36,7 @@ md"""
 
 # ╔═╡ 59a77bad-9a83-4358-a946-cb477d3264c1
 md"""
-# **知识链接：**
+# 知识链接：
 1. 数据与数据类型
 2. 常见统计指标及含义
 3. 缺失值处理方法
@@ -46,7 +46,7 @@ md"""
 
 # ╔═╡ 0271d168-2d8c-4e7b-8111-f098d84bd68d
 md"""
-# 实验步骤：
+# 实验步骤
 """
 
 # ╔═╡ 2a1b0aa3-6957-4435-8010-b568c8b64b5e
@@ -437,7 +437,7 @@ julia> cos(ret.AGE, ret.AMOUNT)
 
 # ╔═╡ 7a151fde-f374-4b62-87a8-6daf044cf668
 md"""
----------------------------------
+---
 """
 
 # ╔═╡ 1e8f0683-a779-4b73-89b2-d8759335935f
@@ -470,15 +470,15 @@ XLSX = "~0.10.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "1ced45b5f5a544698fdba88f62ad2dd8b12e32a4"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
-git-tree-sha1 = "297b6b41b66ac7cbbebb4a740844310db9fd7b8c"
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
 uuid = "6e696c72-6542-2067-7265-42206c756150"
-version = "1.3.1"
+version = "1.3.2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -491,10 +491,10 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.Box]]
-deps = ["Markdown"]
-git-tree-sha1 = "d1bb190a6c0f8eec339173350c77d7d87ab900c8"
+deps = ["HypertextLiteral", "Markdown"]
+git-tree-sha1 = "c43838e1b85ae396b37551d2b48f71efdb1d4bbe"
 uuid = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
-version = "1.0.1"
+version = "1.0.15"
 
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
@@ -539,9 +539,9 @@ version = "1.0.2"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
-git-tree-sha1 = "c955881e3c981181362ae4088b35995446298b80"
+git-tree-sha1 = "b1c55339b7c6c350ee89f2c1604299660525b248"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.14.0"
+version = "4.15.0"
 weakdeps = ["Dates", "LinearAlgebra"]
 
     [deps.Compat.extensions]
@@ -550,7 +550,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
@@ -617,9 +617,9 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
-git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
+git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.4"
+version = "0.8.5"
 
 [[deps.FreqTables]]
 deps = ["CategoricalArrays", "Missings", "NamedArrays", "Tables"]
@@ -776,9 +776,9 @@ version = "2023.1.10"
 
 [[deps.NamedArrays]]
 deps = ["Combinatorics", "DataStructures", "DelimitedFiles", "InvertedIndices", "LinearAlgebra", "Random", "Requires", "SparseArrays", "Statistics"]
-git-tree-sha1 = "0ae91efac93c3859f5c812a24c9468bb9e50b028"
+git-tree-sha1 = "c7aab3836df3f31591a2b4167fcd87b741dacfc9"
 uuid = "86f7a689-2022-50b4-a561-43c23ac3c673"
-version = "0.10.1"
+version = "0.10.2"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -807,9 +807,9 @@ version = "1.10.0"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "71a22244e352aa8c5f0f2adde4150f62368a3f2e"
+git-tree-sha1 = "ab55ee1510ad2af0ff674dbcced5e94921f867a9"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.58"
+version = "0.7.59"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -864,9 +864,9 @@ version = "0.7.0"
 
 [[deps.SentinelArrays]]
 deps = ["Dates", "Random"]
-git-tree-sha1 = "0e7508ff27ba32f26cd459474ca2ede1bc10991f"
+git-tree-sha1 = "90b4f68892337554d31cdcdbe19e48989f26c7e6"
 uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.4.1"
+version = "1.4.3"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -940,9 +940,9 @@ deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.TranscodingStreams]]
-git-tree-sha1 = "71509f04d045ec714c4748c785a59045c3736349"
+git-tree-sha1 = "5d54d076465da49d6746c647022f3b3674e64156"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.10.7"
+version = "0.10.8"
 weakdeps = ["Random", "Test"]
 
     [deps.TranscodingStreams.extensions]
@@ -984,9 +984,9 @@ version = "0.10.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
-git-tree-sha1 = "532e22cf7be8462035d092ff21fada7527e2c488"
+git-tree-sha1 = "52ff2af32e591541550bd753c0da8b9bc92bb9d9"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.12.6+0"
+version = "2.12.7+0"
 
 [[deps.ZipFile]]
 deps = ["Libdl", "Printf", "Zlib_jll"]
@@ -1016,7 +1016,7 @@ version = "17.4.0+2"
 """
 
 # ╔═╡ Cell order:
-# ╟─6dc4358c-bbf7-41e5-a54a-0b04efcafd7b
+# ╟─a922d17b-3d81-4a0b-993f-786f2fc922f0
 # ╟─dac9f5fd-b531-41cc-bf24-de036de2631d
 # ╟─59a77bad-9a83-4358-a946-cb477d3264c1
 # ╟─0271d168-2d8c-4e7b-8111-f098d84bd68d
