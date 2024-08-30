@@ -1,26 +1,22 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.46
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ 349bbd34-b34e-46c3-8c47-8bb415d497c8
-using PlutoUI, ARules,CSV, DataFrames
+using  CSV, DataFrames, PlutoUI
 
-# ╔═╡ 768ce87f-a710-47b3-8a7e-9d81a2a0510a
-#=
-下面的包Box并没有在Julia的通用注册中心注册。主要用于排版。如果要使用该包， 需要首先安装一个非通用的注册中心， 即在RPEL中执行如下代码即可。
-```julia
+# ╔═╡ 7a28964e-9e44-4429-a1af-e2a761d8534a
+using RuleMiner
+
+# ╔═╡ d24d3f2c-85c6-4912-928a-a2a585c11134
 begin
-using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/mathutopia/Wlreg.git"))
-end
-```
-=#
-using Box
-
-# ╔═╡ 552abfd5-a12c-46a4-8754-bf6c38e465bf
-PlutoUI.TableOfContents(title = "目录", depth = 3, aside = true)
+	using PlutoTeachingTools
+	Temp = @ingredients "chinese.jl" # provided by PlutoLinks.jl
+	PlutoTeachingTools.register_language!("chinese", Temp.PTTChinese.China())
+	set_language!( PlutoTeachingTools.get_language("chinese") )
+end;
 
 # ╔═╡ 43f9a5aa-1649-4c82-ab8a-605e1da8b61a
 html"""
@@ -36,6 +32,9 @@ md"""
 	3. 能对不同领域的问题， 通过恰当的方式， 将其转换为关联规则挖掘的问题， 并通过编码实现挖掘。
 
 """
+
+# ╔═╡ 552abfd5-a12c-46a4-8754-bf6c38e465bf
+PlutoUI.TableOfContents(title = "目录", depth = 3, aside = true)
 
 # ╔═╡ 075edf0d-3b6a-4bba-986f-71687365b0b9
 md"""
@@ -77,7 +76,7 @@ md"""
 
 # ╔═╡ 412f7a9d-4731-4a69-a942-74fe0de10d6a
 md"""
-下面首先读取数据集。 数据集中每一个行代表一个客户， 每一列代表一项移动业务。如果用户订购了该业务， 则对应的位置值为1， 否则为0.
+下面首先读取数据集。 数据集中每一个行代表一个客户， 每一列代表一项移动业务。如果用户订购了该业务， 则对应的位置值为1， 否则为0。最后一列khbm代表客户编码。
 """
 
 # ╔═╡ 23cd0f0d-7775-40aa-8669-f605ad137ecf
@@ -91,24 +90,35 @@ md"""
 # ╔═╡ 46fb9aaa-4bec-4df6-a484-eb99a6a2fbe8
 dropmissing!(ydyw)
 
-# ╔═╡ 9f4d0b06-b7af-4879-adbf-a71251aa5676
+# ╔═╡ fa78943e-0876-494c-bffe-0a15caa6ccd9
 md"""
-接下来， 我们将使用Arules.jl包做关联规则的挖掘。 在Arules.jl中， 一个项集用一个向量表示， 所有项集用向量的向量表示。 为此， 我们将移动业务的每一项赋予一个编号，再将每个用户订购业务转化为一个向量。由于在数据集中， 最后一列代表的是客户编码。这不是一项业务。在分析中需要剔除。因此， 后面的分析， 只需要考虑18种业务。
+接下来， 我们将使用RuleMiner.jl包做关联规则的挖掘。 在RuleMiner.jl中， 引入`Transactions` 结构表示交易数据的集合。 具体而言：
 
-下面构建的字典`id2name`用于将业务的编号转化为业务的名称。 其中`names(ydyw)`可以获得数据中的字段名，Dict用于将构成pair的多个项转化为一个字典。
+**Transactions**：一个结构体（struct），用于以稀疏矩阵格式表示交易集合。
+
+#### 字段
+- **matrix**：`SparseMatrixCSC{Bool,Int64}` 类型，一个稀疏布尔矩阵，表示交易。矩阵的行对应交易，列对应商品。位置 `(i,j)` 的 `true` 值表示商品 `j` 出现在交易 `i` 中。
+- **colkeys**：`Dict{Int,String}` 类型，一个字典，将列索引映射到商品名称。这允许从矩阵列索引检索原始商品名称。
+- **linekeys**：`Dict{Int,String}` 类型，一个字典，将行索引映射到交易标识符。这可以用来将矩阵行映射回它们的原始交易 ID 或行号。
+
+#### 构造函数
+- `Transactions(matrix::SparseMatrixCSC{Bool,Int64}, colkeys::Dict{Int,String}, linekeys::Dict{Int,String})`：直接使用稀疏矩阵、列键和行键字典来创建 `Transactions` 对象。
+- `Transactions(df::DataFrame, indexcol::Union{Symbol,Nothing}=nothing)`：从一个 DataFrame 创建 `Transactions` 对象。DataFrame 的每一行是一个交易，每一列是一个商品。`indexcol` 是可选的，指定用作交易标识符的列。如果没有提供，将使用行号作为标识符。
+
+
+#### 相关函数
+- `load_transactions`：从文件加载交易数据并返回 `Transactions` 结构。
+- `txns_to_df`：将 `Transactions` 对象转换为 DataFrame。
 
 """
 
-# ╔═╡ 81dc1a3d-f407-42b7-8c73-9c2af8dc907c
-id2name = Dict(1:18 .=> names(ydyw)[1:18])
-
-# ╔═╡ 03ab5928-973c-4024-993b-76d78af98bc5
+# ╔═╡ 51dd934d-4224-481e-94ed-88f44cc267df
 md"""
-下面的代码将数据集转换为一个项集的集合（向量的向量）。 这是采用向量推导的方式构建的。 其中`eachrow(ydyw)`会将数据集`ydyw`按行构成一个可迭代对象。`for row in eachrow(ydyw)` 用于遍历每一行。`[j for j in 1:(length(row)-1) if row[j]==1]`的作用是构建一个向量， 向量的元素是每一行中值为1的元素的下标。
+由于我们的数据已经整理成DataFrame的格式，可以直接使用基于DataFrame的构造函数构造事务数据集。
 """
 
-# ╔═╡ e687f5de-a445-4c2e-874c-d4bd1119f11a
-txs = [[j for j in 1:(length(row)-1) if row[j]==1]	for row in eachrow(ydyw)]
+# ╔═╡ ce3bba49-7479-4d43-88f1-95ea97ccedf1
+txs = Transactions(ydyw, :khbm)
 
 # ╔═╡ 106c0603-9780-481a-a9a9-51c219bd45f5
 md"""
@@ -127,11 +137,11 @@ md"""
 
 # ╔═╡ 80ec4ff9-5337-4631-b40b-ff6a2c6dbedf
 md"""
-通过函数`frequent`可以实现频繁项集的计算。该函数调用方式如下： 
+通过函数`eclat`可以实现频繁项集的计算。该函数调用方式如下： 
 ```
-frequent(transactions::Vector{Vector{S}}, minsupp::T, maxdepth) where {T <: Real, S}
+eclat(txns::Transactions, min_support::Union{Int,Float64})::DataFrame
 ```
-其中， transactions是用向量的向量表示的所有项集，  minsupp表示支持度阈值， maxdepth表示支持的最大的项集宽度。项集的类型是S， S可以代表任何类型，而支持度的类型是实数的子类型都行（T <: Real）
+其中， transactions是前面提到的交易集合，  min_support表示支持度阈值。
 """
 
 # ╔═╡ a37edbcf-7f83-42f7-967c-a851ff562cd4
@@ -140,54 +150,61 @@ md"""
 """
 
 # ╔═╡ 88e3e70b-efd0-47a6-bcf2-3c94d55a4f71
-fres1 = frequent(txs, 5, 17)
+fres1 = eclat(txs, 5)
 
 # ╔═╡ a7174b3e-fafe-442b-b341-942fa79e239a
 md"""
-为了更好的了解结果， 我们可以对它按supp列从大到小排序。
+为了更好的了解结果， 我们可以对它按Support列从大到小排序。
 """
 
 # ╔═╡ 3ecbe4ff-0771-4a9c-b474-79404d91030f
-sort!(fres1, :supp, rev = true)
+sort!(fres1, :Support, rev = true)
 
 # ╔═╡ e87e7eeb-5161-46ae-88b3-084f8ca42361
 md"""
-从排序结果看， 空的项集是最多的。当然， 这个项集没有意义。 其次是单项集{17}， 这个项对应的是$(id2name[17])， 即GPRS业务。从结果可见， GPRS业务是几乎所有的用户都开通了。 可以通过前面构建的编号到名字的字典`id2name`获得每个项目的名字。
+从排序结果看， GPRS业务是最频繁的项集。事实上，GPRS业务是几乎所有的用户都开通了。 排在第二位的是CR_FLAG，表示彩铃业务。这也是一项大部分用户都会开通的业务。
 """
 
 # ╔═╡ 80f0356c-b2f4-46ab-858a-31338149cd0b
 md"""
 ### 产生关联规则
-接下来， 使用apriori算法挖掘关联规则。`apriori`函数的签名如下：
+接下来， 使用apriori算法挖掘关联规则。`apriori`函数相关信息如下：
+
+**函数声明：**
+```julia
+apriori(txns::Transactions, min_support::Union{Int,Float64}, max_length::Int)::DataFrame
 ```
-apriori(transactions; supp = 0.01, conf = 0.8, maxlen = 5)
-```
-其中， `transactions`含义与`frequent`函数中一致。 `supp`表示规则的支持度， `conf`表示规则的置信度， `maxlen`是规则的长度（前件和后件的长度和）。 注意，  后三个参数是关键字参数， 都有默认值。
+
+**参数：**
+- `txns::Transactions`：包含待挖掘数据集的 `Transactions` 对象。
+- `min_support::Union{Int,Float64}`：最小支持度阈值。如果为 `Int` 类型，表示绝对支持度；如果为 `Float64` 类型，表示相对支持度。
+- `max_length::Int`：要生成规则的最大长度。
+
+**返回值：**
+返回一个 `DataFrame`，包含发现的关联规则，以及以下列：
+- `LHS`：规则的左侧（前件）。
+- `RHS`：规则的右侧（后件）。
+- `Support`：规则的相对支持度。
+- `Confidence`：规则的置信度。
+- `Coverage`：规则的覆盖度（RHS支持度）。
+- `Lift`：关联规则的提升度。
+- `N`：关联规则的绝对支持度。
+- `Length`：关联规则中项的数量。
+
+**描述：**
+Apriori 算法使用广度优先、逐层搜索策略来发现频繁项集。它首先识别频繁的单个项，然后通过组合较小的频繁项集迭代构建更大的项集。在每次迭代中，它从大小为 k-1 的项集中生成大小为 k 的候选项集，然后剪枝掉任何有不频繁子集的候选项。
 """
 
 # ╔═╡ 6051f8d0-eb87-405d-b503-2dce080ac05a
 md"""
-下面的代码选择`supp=0.1`挖掘关联规则。返回结果仍然是d`ataframe`， 每一行代表一条规则。 其中`lhs`表示规则的前件（左手边）, `rhs`是规则的右件（右手边）, `supp、conf、lift`分别表示规则的支持度，置信度和提升度。
+下面的代码选择`Support=0.1`挖掘关联规则。
 """
 
 # ╔═╡ dc7ce647-23e4-415c-ac9a-c5f5fa8a65d0
-rules1 = apriori(txs, supp=0.1)
+rules1 = apriori(txs, 0.1,5)
 
-# ╔═╡ d3041d44-81da-4bf6-85df-deb2b091be8d
-md"""
-比如第二条规则， `"{2 | 17}"	=> "5"`， 它表示的是{ $(id2name[2]) | $(id2name[17])} => { $(id2name[5]) }, 即{139邮箱, GPRS业务} => {彩铃}
-"""
-
-# ╔═╡ fb6fdb58-e3db-4d4f-92b4-5e35b0b9451c
-md"""
-apriori算法还有另外一种用法， 其输入参数可以是共现矩阵。即一个逻辑矩阵， 列表示项， 行表示交易， 元素为true表示行对应的交易中存在列对应的项。 这种格式的数据，只需要将原始数据转化为一个逻辑矩阵即可。 可以先试用Matrix将数据转化为矩阵， 进而使用BitMatrix将矩阵进一步转化为逻辑矩阵。 其它的参数是相同的。 不过该函数返回的结果是由规则构成的向量， 显示上稍差一点。
-"""
-
-# ╔═╡ 9c781d6e-dc50-4c43-aba3-5b30df5bfcff
-occurrence = Matrix(ydyw[:, 1:end-1])
-
-# ╔═╡ de95546c-d9b6-4436-89a4-78a68998dec0
-apriori(BitMatrix(occurrence), supp=0.1)
+# ╔═╡ 080d50a2-1911-427c-94ba-cc840856b03d
+txs
 
 # ╔═╡ 224261cf-59e2-4e0c-a215-543cdb1ba8fe
 md"""
@@ -197,33 +214,33 @@ md"""
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-ARules = "7cbe2057-1070-5a1a-9a20-8e476bfa53e1"
-Box = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+RuleMiner = "26420b10-3f9f-4b54-bd85-e6b3d5a44d3c"
 
 [compat]
-ARules = "~0.0.2"
-Box = "~1.0.1"
 CSV = "~0.10.14"
-DataFrames = "~0.21.8"
-PlutoUI = "~0.7.1"
+DataFrames = "~1.6.1"
+PlutoTeachingTools = "~0.2.15"
+PlutoUI = "~0.7.60"
+RuleMiner = "~0.4.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "558a27d38f313b85ee0348e93396bcb52fc636c5"
+project_hash = "02047030c0beac35b85857b16ea6006d2b88984c"
 
-[[deps.ARules]]
-deps = ["DataFrames", "StatsBase"]
-git-tree-sha1 = "28d08a275d00e869550a41d4859b5fcbe1f2b7b6"
-uuid = "7cbe2057-1070-5a1a-9a20-8e476bfa53e1"
-version = "0.0.2"
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -235,40 +252,54 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[deps.Box]]
-deps = ["HypertextLiteral", "Markdown"]
-git-tree-sha1 = "c43838e1b85ae396b37551d2b48f71efdb1d4bbe"
-uuid = "247ae7ab-d1b9-4f88-8529-b44b862cffa0"
-version = "1.0.15"
-
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
 git-tree-sha1 = "6c834533dc1fabd820c1db03c839bf97e45a3fab"
 uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 version = "0.10.14"
 
-[[deps.CategoricalArrays]]
-deps = ["DataAPI", "Future", "JSON", "Missings", "Printf", "Statistics", "StructTypes", "Unicode"]
-git-tree-sha1 = "2ac27f59196a68070e132b25713f9a5bbc5fa0d2"
-uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
-version = "0.8.3"
+[[deps.CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "7eee164f122511d3e4e1ebadb7956939ea7e1c77"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.3.6"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
-git-tree-sha1 = "59939d8a997469ee05c4b4944560a820f9ba0d73"
+git-tree-sha1 = "bce6804e5e6044c6daab27bb533d1295e4a2e759"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
-version = "0.7.4"
+version = "0.7.6"
+
+[[deps.ColorTypes]]
+deps = ["FixedPointNumbers", "Random"]
+git-tree-sha1 = "b10d0b65641d57b8b4d5e234446582de5047050d"
+uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
+version = "0.11.5"
+
+[[deps.Combinatorics]]
+git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
+uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+version = "1.0.2"
 
 [[deps.Compat]]
-deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "d476eaeddfcdf0de15a67a948331c69a585495fa"
+deps = ["TOML", "UUIDs"]
+git-tree-sha1 = "8ae8d32e09f0dcf42a36b90d4e17f5dd2e4c4215"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "3.47.0"
+version = "4.16.0"
+weakdeps = ["Dates", "LinearAlgebra"]
+
+    [deps.Compat.extensions]
+    CompatLinearAlgebraExt = "LinearAlgebra"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.1+0"
+
+[[deps.Crayons]]
+git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
+uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
+version = "4.1.1"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -276,10 +307,10 @@ uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
 
 [[deps.DataFrames]]
-deps = ["CategoricalArrays", "Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "Missings", "PooledArrays", "Printf", "REPL", "Reexport", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "ecd850f3d2b815431104252575e7307256121548"
+deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
+git-tree-sha1 = "04c738083f29f86e62c8afc341f0967d8717bdb8"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "0.21.8"
+version = "1.6.1"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -296,21 +327,9 @@ version = "1.0.0"
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
-[[deps.DelimitedFiles]]
-deps = ["Mmap"]
-git-tree-sha1 = "9e2f36d3c96a820c678f2f1f1782582fcf685bae"
-uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
-version = "1.9.1"
-
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
-
-[[deps.DocStringExtensions]]
-deps = ["LibGit2"]
-git-tree-sha1 = "2fb1e02f2b635d0845df5d7c167fec4dd739b00d"
-uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.9.3"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -318,17 +337,39 @@ uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
 
 [[deps.FilePathsBase]]
-deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
-git-tree-sha1 = "9f00e42f8d99fdde64d40c8ea5d14269a2e2c1aa"
+deps = ["Compat", "Dates"]
+git-tree-sha1 = "7878ff7172a8e6beedd1dea14bd27c3c6340d361"
 uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
-version = "0.9.21"
+version = "0.9.22"
+weakdeps = ["Mmap", "Test"]
+
+    [deps.FilePathsBase.extensions]
+    FilePathsBaseMmapExt = "Mmap"
+    FilePathsBaseTestExt = "Test"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
+[[deps.FixedPointNumbers]]
+deps = ["Statistics"]
+git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
+uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
+version = "0.8.5"
+
+[[deps.Format]]
+git-tree-sha1 = "9c68794ef81b08086aeb32eeaf33531668d5f5fc"
+uuid = "1fa38f19-a742-5d3f-a2b9-30dd87b9d5f8"
+version = "1.3.7"
+
 [[deps.Future]]
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
+
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
 
 [[deps.HypertextLiteral]]
 deps = ["Tricks"]
@@ -336,11 +377,24 @@ git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
 uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
 version = "0.9.5"
 
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.5"
+
 [[deps.InlineStrings]]
-deps = ["Parsers"]
-git-tree-sha1 = "9cc2baf75c6d09f9da536ddf58eb2f29dedaf461"
+git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
 uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
-version = "1.4.0"
+version = "1.4.2"
+
+    [deps.InlineStrings.extensions]
+    ArrowTypesExt = "ArrowTypes"
+    ParsersExt = "Parsers"
+
+    [deps.InlineStrings.weakdeps]
+    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
@@ -350,11 +404,6 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 version = "1.3.0"
-
-[[deps.IrrationalConstants]]
-git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
-uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
-version = "0.2.2"
 
 [[deps.IteratorInterfaceExtensions]]
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
@@ -366,6 +415,33 @@ deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.4"
+
+[[deps.JuliaInterpreter]]
+deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
+git-tree-sha1 = "4b415b6cccb9ab61fec78a621572c82ac7fa5776"
+uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
+version = "0.9.35"
+
+[[deps.LaTeXStrings]]
+git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
+uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+version = "1.3.1"
+
+[[deps.Latexify]]
+deps = ["Format", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdown", "OrderedCollections", "Requires"]
+git-tree-sha1 = "ce5f5621cac23a86011836badfedf664a612cee4"
+uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+version = "0.16.5"
+
+    [deps.Latexify.extensions]
+    DataFramesExt = "DataFrames"
+    SparseArraysExt = "SparseArrays"
+    SymEngineExt = "SymEngine"
+
+    [deps.Latexify.weakdeps]
+    DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+    SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -398,24 +474,25 @@ uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
-[[deps.LogExpFunctions]]
-deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "18144f3e9cbe9b15b070288eef858f71b291ce37"
-uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.27"
-
-    [deps.LogExpFunctions.extensions]
-    LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
-    LogExpFunctionsChangesOfVariablesExt = "ChangesOfVariables"
-    LogExpFunctionsInverseFunctionsExt = "InverseFunctions"
-
-    [deps.LogExpFunctions.weakdeps]
-    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
-
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[deps.LoweredCodeUtils]]
+deps = ["JuliaInterpreter"]
+git-tree-sha1 = "1ce1834f9644a8f7c011eb0592b7fd6c42c90653"
+uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
+version = "3.0.1"
+
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
+
+[[deps.MacroTools]]
+deps = ["Markdown", "Random"]
+git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
+uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+version = "0.5.13"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -428,9 +505,9 @@ version = "2.28.2+1"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
-git-tree-sha1 = "f8c673ccc215eb50fcadb285f522420e29e69e1c"
+git-tree-sha1 = "ec4f7fbeab05d7747bdf98eb74d130a2a2ed298d"
 uuid = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
-version = "0.4.5"
+version = "1.2.0"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -464,17 +541,35 @@ deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 version = "1.10.0"
 
+[[deps.PlutoHooks]]
+deps = ["InteractiveUtils", "Markdown", "UUIDs"]
+git-tree-sha1 = "072cdf20c9b0507fdd977d7d246d90030609674b"
+uuid = "0ff47ea0-7a50-410d-8455-4348d5de0774"
+version = "0.0.5"
+
+[[deps.PlutoLinks]]
+deps = ["FileWatching", "InteractiveUtils", "Markdown", "PlutoHooks", "Revise", "UUIDs"]
+git-tree-sha1 = "8f5fa7056e6dcfb23ac5211de38e6c03f6367794"
+uuid = "0ff47ea0-7a50-410d-8455-4348d5de0420"
+version = "0.1.6"
+
+[[deps.PlutoTeachingTools]]
+deps = ["Downloads", "HypertextLiteral", "LaTeXStrings", "Latexify", "Markdown", "PlutoLinks", "PlutoUI", "Random"]
+git-tree-sha1 = "5d9ab1a4faf25a62bb9d07ef0003396ac258ef1c"
+uuid = "661c6b06-c737-4d37-b85c-46df65de6f69"
+version = "0.2.15"
+
 [[deps.PlutoUI]]
-deps = ["Base64", "Dates", "InteractiveUtils", "Logging", "Markdown", "Random", "Suppressor"]
-git-tree-sha1 = "45ce174d36d3931cd4e37a47f93e07d1455f038d"
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "eba4810d5e6a01f612b948c9fa94f905b49087b0"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.1"
+version = "0.7.60"
 
 [[deps.PooledArrays]]
-deps = ["DataAPI"]
-git-tree-sha1 = "b1333d4eced1826e15adbdf01a4ecaccca9d353c"
+deps = ["DataAPI", "Future"]
+git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
 uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
-version = "0.5.3"
+version = "1.4.3"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -487,6 +582,12 @@ deps = ["TOML"]
 git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.3"
+
+[[deps.PrettyTables]]
+deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
+git-tree-sha1 = "66b20dd35966a748321d3b2537c4584cf40387c7"
+uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+version = "2.3.2"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -501,10 +602,27 @@ deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[deps.Reexport]]
-deps = ["Pkg"]
-git-tree-sha1 = "7b1d07f411bc8ddb7977ec7f377b97b158514fe0"
+git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
-version = "0.2.0"
+version = "1.2.2"
+
+[[deps.Requires]]
+deps = ["UUIDs"]
+git-tree-sha1 = "838a3a4188e2ded87a4f9f184b4b0d78a1e91cb7"
+uuid = "ae029012-a4dd-5104-9daa-d747884805df"
+version = "1.3.0"
+
+[[deps.Revise]]
+deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "REPL", "Requires", "UUIDs", "Unicode"]
+git-tree-sha1 = "7b7850bb94f75762d567834d7e9802fc22d62f9c"
+uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
+version = "3.5.18"
+
+[[deps.RuleMiner]]
+deps = ["Combinatorics", "DataFrames", "Mmap", "SparseArrays"]
+git-tree-sha1 = "8ee17616307a2ea579c1c4d8d943b4d7170be6ca"
+uuid = "26420b10-3f9f-4b54-bd85-e6b3d5a44d3c"
+version = "0.4.1"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -512,25 +630,21 @@ version = "0.7.0"
 
 [[deps.SentinelArrays]]
 deps = ["Dates", "Random"]
-git-tree-sha1 = "90b4f68892337554d31cdcdbe19e48989f26c7e6"
+git-tree-sha1 = "ff11acffdb082493657550959d4feb4b6149e73a"
 uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.4.3"
+version = "1.4.5"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-
-[[deps.SharedArrays]]
-deps = ["Distributed", "Mmap", "Random", "Serialization"]
-uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[deps.SortingAlgorithms]]
 deps = ["DataStructures"]
-git-tree-sha1 = "f6cb12bae7c2ecff6c4986f28defff8741747a9b"
+git-tree-sha1 = "66e0a8e672a0bdfca2c3f5937efb8538b9ddc085"
 uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
-version = "0.3.2"
+version = "1.2.1"
 
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
@@ -542,34 +656,16 @@ deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 version = "1.10.0"
 
-[[deps.StatsAPI]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "1ff449ad350c9c4cbc756624d6f8a8c3ef56d3ed"
-uuid = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
-version = "1.7.0"
-
-[[deps.StatsBase]]
-deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
-uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.33.21"
-
-[[deps.StructTypes]]
-deps = ["Dates", "UUIDs"]
-git-tree-sha1 = "ca4bccb03acf9faaf4137a9abc1881ed1841aa70"
-uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
-version = "1.10.0"
+[[deps.StringManipulation]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "a04cabe79c5f01f4d723cc6704070ada0b9d46d5"
+uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
+version = "0.3.4"
 
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
 version = "7.2.1+1"
-
-[[deps.Suppressor]]
-deps = ["Logging"]
-git-tree-sha1 = "9143c41bd539a8885c79728b9dedb0ce47dc9819"
-uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
-version = "0.2.7"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -583,10 +679,10 @@ uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
 version = "1.0.1"
 
 [[deps.Tables]]
-deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits"]
-git-tree-sha1 = "cb76cf677714c095e535e3501ac7954732aeea2d"
+deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "OrderedCollections", "TableTraits"]
+git-tree-sha1 = "598cd7c1f68d1e205689b1c2fe65a9f85846f297"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "1.11.1"
+version = "1.12.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -598,18 +694,19 @@ deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.TranscodingStreams]]
-git-tree-sha1 = "5d54d076465da49d6746c647022f3b3674e64156"
+git-tree-sha1 = "e84b3a11b9bece70d14cce63406bbc79ed3464d2"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.10.8"
-weakdeps = ["Random", "Test"]
-
-    [deps.TranscodingStreams.extensions]
-    TestExt = ["Test", "Random"]
+version = "0.11.2"
 
 [[deps.Tricks]]
-git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+git-tree-sha1 = "7822b97e99a1672bfb1b49b668a6d46d58d8cbcb"
 uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.8"
+version = "0.1.9"
+
+[[deps.URIs]]
+git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
+uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+version = "1.5.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -651,10 +748,11 @@ version = "17.4.0+2"
 """
 
 # ╔═╡ Cell order:
-# ╠═552abfd5-a12c-46a4-8754-bf6c38e465bf
 # ╟─43f9a5aa-1649-4c82-ab8a-605e1da8b61a
 # ╟─00488270-759d-11ec-12fe-cb07b9231320
 # ╠═349bbd34-b34e-46c3-8c47-8bb415d497c8
+# ╠═7a28964e-9e44-4429-a1af-e2a761d8534a
+# ╠═552abfd5-a12c-46a4-8754-bf6c38e465bf
 # ╟─075edf0d-3b6a-4bba-986f-71687365b0b9
 # ╟─356c9ecf-648b-488a-a9dd-69d2a7ced9f3
 # ╟─735979ca-1278-4bc5-8917-3ff0d4fd738c
@@ -662,10 +760,9 @@ version = "17.4.0+2"
 # ╠═23cd0f0d-7775-40aa-8669-f605ad137ecf
 # ╟─b6dd9070-fb79-413c-9694-72d200df17c8
 # ╠═46fb9aaa-4bec-4df6-a484-eb99a6a2fbe8
-# ╟─9f4d0b06-b7af-4879-adbf-a71251aa5676
-# ╠═81dc1a3d-f407-42b7-8c73-9c2af8dc907c
-# ╟─03ab5928-973c-4024-993b-76d78af98bc5
-# ╠═e687f5de-a445-4c2e-874c-d4bd1119f11a
+# ╟─fa78943e-0876-494c-bffe-0a15caa6ccd9
+# ╟─51dd934d-4224-481e-94ed-88f44cc267df
+# ╠═ce3bba49-7479-4d43-88f1-95ea97ccedf1
 # ╟─106c0603-9780-481a-a9a9-51c219bd45f5
 # ╟─bab54374-5dbf-4a79-bb17-a04f788b9454
 # ╟─f4bee84d-a0f2-4642-aedf-b6d365aa055b
@@ -678,11 +775,8 @@ version = "17.4.0+2"
 # ╟─80f0356c-b2f4-46ab-858a-31338149cd0b
 # ╟─6051f8d0-eb87-405d-b503-2dce080ac05a
 # ╠═dc7ce647-23e4-415c-ac9a-c5f5fa8a65d0
-# ╟─d3041d44-81da-4bf6-85df-deb2b091be8d
-# ╟─fb6fdb58-e3db-4d4f-92b4-5e35b0b9451c
-# ╠═9c781d6e-dc50-4c43-aba3-5b30df5bfcff
-# ╠═de95546c-d9b6-4436-89a4-78a68998dec0
+# ╠═080d50a2-1911-427c-94ba-cc840856b03d
 # ╟─224261cf-59e2-4e0c-a215-543cdb1ba8fe
-# ╟─768ce87f-a710-47b3-8a7e-9d81a2a0510a
+# ╠═d24d3f2c-85c6-4912-928a-a2a585c11134
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
